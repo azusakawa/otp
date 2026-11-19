@@ -10,7 +10,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-42a5f9?style=flat-square)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square)](https://nodejs.org)
 
-The lightweight, personal AI agent orchestrator — inspired by [stablyai/orca](https://github.com/stablyai/orca), but focused and fast.
+The lightweight, personal AI agent orchestrator.
 
 [**Download**](#quick-start) · [**Features**](#features) · [**CLI**](#cli-reference) · [**Architecture**](#architecture) · [**Contributing**](#contributing)
 
@@ -46,21 +46,6 @@ That's it. A desktop app opens with a three-panel layout: **worktrees**, **chat*
 | 🌲 **Parallel worktrees** | Each task gets its own isolated Git worktree |
 | 💬 **Real-time chat** | Send messages to agents and get live responses |
 | 📺 **Terminal output** | Stream agent stdout/stderr in real time |
-
----
-
-## Why OTP?
-
-Orca is powerful but feature-rich and broad. OTP is different:
-
-| | Orca | OTP |
-|---|---|---|
-| **Scope** | Multi-agent, multi-platform | OpenCode + Hermes only |
-| **Focus** | Enterprise & team | Personal, lightweight |
-| **Architecture** | Complex monorepo | Simple 3-package monorepo |
-| **First-class** | Everything | CLI + GUI + orchestration |
-
-**OTP is what you want when you just need to juggle a couple of agents across a few worktrees without the bloat.**
 
 ---
 
@@ -158,5 +143,3 @@ git push -u origin feature/my-feature
 ## License
 
 [MIT](./LICENSE) © 2026 azusakawa
-
-Inspired by [stablyai/orca](https://github.com/stablyai/orca).

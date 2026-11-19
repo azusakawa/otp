@@ -10,7 +10,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-42a5f9?style=flat-square)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square)](https://nodejs.org)
 
-輕量級個人 AI 智能體編排器 —— 靈感來自 [stablyai/orca](https://github.com/stablyai/orca)，但更專注、更快速。
+輕量級個人 AI 智能體編排器。
 
 [**快速開始**](#快速開始) · [**功能**](#功能) · [**CLI 參考**](#cli-參考) · [**架構**](#架構) · [**貢獻指南**](#貢獻指南)
 
@@ -48,21 +48,6 @@ pnpm dev:gui
 | 🌲 **平行工作樹** | 每個任務擁有獨立的 Git worktree |
 | 💬 **即時聊天** | 向智能體發送訊息，即時接收回應 |
 | 📺 **終端輸出** | 即時串流顯示智能體 stdout/stderr |
-
----
-
-## 為什麼選擇 OTP？
-
-Orca 功能強大但龐大。OTP 的做法不同：
-
-| | Orca | OTP |
-|---|---|---|
-| **範圍** | 多智能體、多平台 | 僅 OpenCode + Hermes |
-| **定位** | 企業與團隊 | 個人、輕量 |
-| **架構** | 複雜 monorepo | 簡潔三套件 monorepo |
-| **一等公民** | 所有功能 | CLI + GUI + 編排 |
-
-**OTP 是你只需要同時管理幾個智能體、幾個工作樹時的最佳選擇。**
 
 ---
 
@@ -160,5 +145,3 @@ git push -u origin feature/my-feature
 ## License
 
 [MIT](./LICENSE) © 2026 azusakawa
-
-靈感來自 [stablyai/orca](https://github.com/stablyai/orca)。
