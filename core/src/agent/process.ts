@@ -28,7 +28,7 @@ export function startAgent(
   const envWithCwd = {
     ...process.env,
     ...env,
-    ORCA_WORKTREE: worktreePath,
+    OTP_WORKTREE: worktreePath,
   };
 
   const proc = spawn(bin, [], {

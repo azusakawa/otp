@@ -36,7 +36,7 @@ export class AgentManager {
     // Start the agent CLI
     const proc = startAgent(session.agentType, worktree.path, {
       ...env,
-      ORCA_SESSION_ID: sessionId,
+      OTP_SESSION_ID: sessionId,
     });
 
     // Set up stdout/stderr handlers

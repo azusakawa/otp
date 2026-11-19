@@ -16,7 +16,7 @@ export function startAgent(agentType: 'opencode' | 'hermes', worktreePath: strin
     cwd: worktreePath,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
-    env: { ...process.env, ORCA_AGENT: agentType },
+    env: { ...process.env, OTP_AGENT: agentType },
   });
 
   return {
