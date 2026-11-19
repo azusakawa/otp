@@ -20,4 +20,5 @@ export default defineConfig({
     renderer(),
   ],
   resolve: { alias: { '@': '/src' } },
+  build: { outDir: 'dist/renderer' },
 });

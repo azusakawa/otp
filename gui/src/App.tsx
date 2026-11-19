@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
+import { useT, type Lang } from './i18n';
 
 interface Worktree {
   id: string; name: string; path: string; branch: string;
@@ -39,6 +40,12 @@ const AGENT_INFO: Record<string, { name: string; icon: string; color: string }> 
   hermes:   { name: 'Hermes',   icon: '🟣', color: '#8b5cf6' },
 };
 
+type TFunc = (key: string, options?: Record<string, unknown>) => string;
+
+function statusLabel(t: TFunc, status: 'idle' | 'running' | 'error'): string {
+  return status === 'running' ? t('status.running') : status === 'error' ? t('status.error') : t('status.idle');
+}
+
 /* ── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -62,16 +69,28 @@ function Sidebar({
   onStart: (id: string) => void; onStop: (id: string) => void;
   onDeleteWt: (id: string) => void; onDeleteSession: (id: string) => void;
 }) {
+  const { t, lng, setLang } = useT();
   return (
     <div className="sidebar">
       <div className="sidebar-header">
         <h1>🐙 OTP</h1>
-        <button className="btn btn-sm" onClick={onOpenCreateWt}>+ 任務樹</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <select
+            className="lang-select"
+            value={lng}
+            onChange={e => setLang(e.target.value as Lang)}
+            title="Language / 語言"
+          >
+            <option value="en">EN</option>
+            <option value="zh-TW">繁中</option>
+          </select>
+          <button className="btn btn-sm" onClick={onOpenCreateWt}>{t('sidebar.newTaskTree')}</button>
+        </div>
       </div>
 
-      <div className="sidebar-section">任務樹 ({worktrees.length})</div>
+      <div className="sidebar-section">{t('sidebar.taskTrees', { count: worktrees.length })}</div>
       <div className="sidebar-content">
-        {worktrees.length === 0 && <div style={{ padding: '12px 0', fontSize: 12, color: '#8b949e' }}>點擊「+ 任務樹」建立</div>}
+        {worktrees.length === 0 && <div style={{ padding: '12px 0', fontSize: 12, color: '#8b949e' }}>{t('sidebar.noTaskTrees')}</div>}
         {worktrees.map(wt => (
           <div className="card" key={wt.id} onClick={() => onSelect(wt.id)}>
             <div className="card-title">{wt.name}</div>
@@ -84,8 +103,8 @@ function Sidebar({
           </div>
         ))}
 
-        <div className="sidebar-section">工作階段 ({sessions.length})</div>
-        {sessions.length === 0 && <div style={{ padding: '8px 0', fontSize: 12, color: '#8b949e' }}>建立任務樹後自動顯示</div>}
+        <div className="sidebar-section">{t('sidebar.sessions', { count: sessions.length })}</div>
+        {sessions.length === 0 && <div style={{ padding: '8px 0', fontSize: 12, color: '#8b949e' }}>{t('sidebar.noSessions')}</div>}
         {sessions.map(s => {
           const ai = AGENT_INFO[s.agentType];
           return (
@@ -93,18 +112,18 @@ function Sidebar({
               <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>{ai.icon} {ai.name}</span>
                 <span className={`badge badge-${s.status}`}>
-                  {s.status === 'running' ? '● 執行中' : s.status === 'error' ? '✕ 錯誤' : '○ 閒置'}
+                  {statusLabel(t, s.status)}
                 </span>
               </div>
-              <div className="card-meta">{s.messages.length} 則訊息</div>
+              <div className="card-meta">{t('sidebar.messagesCount', { count: s.messages.length })}</div>
               <div className="card-actions">
                 {s.status === 'idle' && (
-                  <button className="btn btn-sm btn-primary" onClick={e => { e.stopPropagation(); onStart(s.id); }}>▶ 啟動</button>
+                  <button className="btn btn-sm btn-primary" onClick={e => { e.stopPropagation(); onStart(s.id); }}>{t('session.start')}</button>
                 )}
                 {s.status === 'running' && (
-                  <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onStop(s.id); }}>⏹ 停止</button>
+                  <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onStop(s.id); }}>{t('session.stop')}</button>
                 )}
-                <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onNewSession(s.worktreeId, s.agentType); }}>+ 副本</button>
+                <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onNewSession(s.worktreeId, s.agentType); }}>{t('session.duplicate')}</button>
                 <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onDeleteSession(s.id); }}>✕</button>
               </div>
             </div>
@@ -119,6 +138,7 @@ function Sidebar({
 function Chat({ session, onSend, onStop }: {
   session: Session | null; onSend: (msg: string) => void; onStop: () => void;
 }) {
+  const { t } = useT();
   const [input, setInput] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -135,8 +155,8 @@ function Chat({ session, onSend, onStop }: {
     return (
       <div className="empty">
         <div className="empty-icon">🐙</div>
-        <div className="empty-text">歡迎使用 OTP</div>
-        <div className="empty-hint">左側建立任務樹 → 選智能體 → 啟動開始協作</div>
+        <div className="empty-text">{t('chat.welcome')}</div>
+        <div className="empty-hint">{t('chat.welcomeHint')}</div>
       </div>
     );
   }
@@ -150,13 +170,13 @@ function Chat({ session, onSend, onStop }: {
         <span className="agent-badge">{ai.icon}</span>
         <span style={{ fontWeight: 600 }}>{ai.name}</span>
         <span className={`badge badge-${session.status}`} style={{ marginLeft: 8 }}>
-          {session.status === 'running' ? '● 執行中' : session.status === 'error' ? '✕ 錯誤' : '○ 閒置'}
+          {statusLabel(t, session.status)}
         </span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: '#8b949e' }}>
           PID: {session.pid ?? '—'}
         </span>
         {session.status === 'running' && (
-          <button className="btn btn-danger btn-sm" onClick={onStop}>停止</button>
+          <button className="btn btn-danger btn-sm" onClick={onStop}>{t('chat.stop')}</button>
         )}
       </div>
 
@@ -164,12 +184,12 @@ function Chat({ session, onSend, onStop }: {
       <div className="chat" ref={chatRef}>
         {session.messages.length === 0 && (
           <div style={{ padding: '32px 0', textAlign: 'center', color: '#8b949e', fontSize: 13 }}>
-            沒有對話，輸入訊息開始協作
+            {t('chat.noMessages')}
           </div>
         )}
         {session.messages.map((m) => (
           <div className={`msg msg-${m.role}`} key={m.id}>
-            <div className="msg-role">{m.role}</div>
+            <div className="msg-role">{t(`role.${m.role}`)}</div>
             <div className="msg-bubble">{m.content}</div>
           </div>
         ))}
@@ -179,13 +199,13 @@ function Chat({ session, onSend, onStop }: {
       <div className="chat-input">
         <form className="chat-input-wrap" onSubmit={submit}>
           <textarea
-            placeholder={session.status === 'running' ? '輸入訊息發送給智能體...' : '啟動後可發送訊息'}
+            placeholder={session.status === 'running' ? t('chat.inputRunning') : t('chat.inputIdle')}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e); } }}
             rows={2}
           />
-          <button type="submit" className="btn btn-primary" disabled={!input.trim()}>發送 →</button>
+          <button type="submit" className="btn btn-primary" disabled={!input.trim()}>{t('chat.send')}</button>
         </form>
       </div>
     </div>
@@ -194,6 +214,7 @@ function Chat({ session, onSend, onStop }: {
 
 /* ── Diff Panel ─────────────────────────────────────────────────────────── */
 function DiffPanel({ worktree }: { worktree: Worktree | undefined }) {
+  const { t } = useT();
   const [diffs, setDiffs] = useState<any[]>([]);
 
   useEffect(() => {
@@ -206,8 +227,8 @@ function DiffPanel({ worktree }: { worktree: Worktree | undefined }) {
 
   return (
     <div className="diff-panel">
-      <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>📋 變更 {worktree.name}</div>
-      {diffs.length === 0 && <div style={{ color: '#8b949e', fontSize: 12 }}>暫無變更</div>}
+      <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>{t('diff.title', { name: worktree.name })}</div>
+      {diffs.length === 0 && <div style={{ color: '#8b949e', fontSize: 12 }}>{t('diff.none')}</div>}
       {diffs.map((d: any, i: number) => (
         <div className="diff-file" key={i}>
           <div className="diff-file-name">{d.file}</div>
@@ -227,6 +248,7 @@ function DiffPanel({ worktree }: { worktree: Worktree | undefined }) {
 
 /* ── Terminal ───────────────────────────────────────────────────────────── */
 function TerminalPanel({ session }: { session: Session | null }) {
+  const { t } = useT();
   const termRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -237,15 +259,15 @@ function TerminalPanel({ session }: { session: Session | null }) {
 
   return (
     <div className="terminal">
-      <div className="terminal-header">終端輸出</div>
+      <div className="terminal-header">{t('terminal.title')}</div>
       <div ref={termRef} style={{
         padding: '8px 12px', fontFamily: 'monospace', fontSize: 12,
         overflow: 'auto', height: '100%', color: '#c9d1d9',
       }}>
         {session?.status === 'running' ? (
-          <div style={{ color: '#8b949e' }}>等待智能體輸出...</div>
+          <div style={{ color: '#8b949e' }}>{t('terminal.waiting')}</div>
         ) : (
-          <div style={{ color: '#8b949e' }}>啟動智能體後在此顯示輸出</div>
+          <div style={{ color: '#8b949e' }}>{t('terminal.hint')}</div>
         )}
       </div>
     </div>
@@ -254,6 +276,7 @@ function TerminalPanel({ session }: { session: Session | null }) {
 
 /* ── App ────────────────────────────────────────────────────────────────── */
 function App() {
+  const { t } = useT();
   const [worktrees, setWorktrees] = useState<Worktree[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeWtId, setActiveWtId] = useState<string | null>(null);
@@ -364,18 +387,18 @@ function App() {
 
       {/* New Worktree Modal */}
       {showModal && (
-        <Modal title="建立任務樹" onClose={() => setShowModal(false)}>
+        <Modal title={t('modal.createTaskTree')} onClose={() => setShowModal(false)}>
           <div className="field">
-            <label>名稱</label>
-            <input value={wtName} onChange={e => setWtName(e.target.value)} placeholder="新功能開發" autoFocus />
+            <label>{t('modal.name')}</label>
+            <input value={wtName} onChange={e => setWtName(e.target.value)} placeholder={t('modal.namePlaceholder')} autoFocus />
           </div>
           <div className="field">
-            <label>Git 倉庫路徑</label>
+            <label>{t('modal.gitPath')}</label>
             <input value={wtPath} onChange={e => setWtPath(e.target.value)} placeholder="~/projects/my-repo" />
           </div>
           <div className="modal-actions">
-            <button className="btn" onClick={() => setShowModal(false)}>取消</button>
-            <button className="btn btn-primary" onClick={handleCreateWt}>建立</button>
+            <button className="btn" onClick={() => setShowModal(false)}>{t('modal.cancel')}</button>
+            <button className="btn btn-primary" onClick={handleCreateWt}>{t('modal.create')}</button>
           </div>
         </Modal>
       )}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline'" />
   <title>OTP</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -51,6 +51,12 @@
     .btn-danger { color: #f85149; border-color: #f8514933; }
     .btn-danger:hover { background: #f8514922; }
     .btn-sm { padding: 2px 7px; font-size: 11px; }
+    .lang-select {
+      padding: 2px 6px; border-radius: 5px; border: 1px solid #30363d;
+      background: #21262d; color: #8b949e; font-size: 11px;
+      cursor: pointer; outline: none;
+    }
+    .lang-select:hover { border-color: #58a6ff; }
     /* Badges */
     .badge {
       display: inline-block; padding: 1px 7px; border-radius: 10px;
@@ -134,6 +140,7 @@
 </head>
 <body>
   <div id="root"></div>
+  <script src="https://unpkg.com/i18next@27.2.2/dist/umd/i18next.min.js"></script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
