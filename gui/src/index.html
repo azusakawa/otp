@@ -1,0 +1,139 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>OTP</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body, #root { height:100%; width:100%; overflow:hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3; font-size: 13px;
+    }
+    /* Sidebar */
+    .sidebar {
+      width: 260px; min-width: 260px; background: #161b22;
+      border-right: 1px solid #30363d; display: flex; flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 12px 14px; border-bottom: 1px solid #30363d;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sidebar-header h1 { font-size: 15px; font-weight: 600; }
+    .sidebar-section {
+      padding: 6px 14px; font-size: 11px; font-weight: 700;
+      color: #8b949e; text-transform: uppercase; letter-spacing: 1px;
+      margin-top: 8px;
+    }
+    .sidebar-content { flex: 1; overflow-y: auto; padding: 4px 8px; }
+    /* Cards */
+    .card {
+      background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+      padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .card:hover { border-color: #58a6ff; }
+    .card.active { border-color: #58a6ff; background: rgba(88,166,255,.06); }
+    .card-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+    .card-meta { color: #8b949e; font-size: 11px; }
+    .card-actions { display: flex; gap: 4px; margin-top: 6px; }
+    /* Buttons */
+    .btn {
+      padding: 4px 10px; border-radius: 5px; border: 1px solid #30363d;
+      background: #21262d; color: #e6edf3; cursor: pointer; font-size: 12px;
+      transition: background .15s;
+    }
+    .btn:hover { background: #30363d; }
+    .btn-primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .btn-primary:hover { background: #388bfd; }
+    .btn-danger { color: #f85149; border-color: #f8514933; }
+    .btn-danger:hover { background: #f8514922; }
+    .btn-sm { padding: 2px 7px; font-size: 11px; }
+    /* Badges */
+    .badge {
+      display: inline-block; padding: 1px 7px; border-radius: 10px;
+      font-size: 10px; font-weight: 700;
+    }
+    .badge-running { background: #3fb95022; color: #3fb950; }
+    .badge-idle { background: #8b949e22; color: #8b949e; }
+    .badge-error { background: #f8514922; color: #f85149; }
+    /* Main content */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .toolbar {
+      padding: 6px 14px; border-bottom: 1px solid #30363d;
+      background: #161b22; display: flex; align-items: center; gap: 8px;
+    }
+    .agent-badge { font-size: 13px; }
+    /* Chat */
+    .chat { flex: 1; overflow-y: auto; padding: 14px; }
+    .msg { margin-bottom: 14px; max-width: 82%; }
+    .msg-user { margin-left: auto; }
+    .msg-assistant { margin-right: auto; }
+    .msg-bubble {
+      padding: 8px 12px; border-radius: 10px; white-space: pre-wrap;
+      word-break: break-word; font-size: 13px; line-height: 1.5;
+    }
+    .msg-user .msg-bubble { background: #1f6feb; color: #fff; border-bottom-right-radius: 3px; }
+    .msg-assistant .msg-bubble { background: #161b22; border: 1px solid #30363d; border-bottom-left-radius: 3px; }
+    .msg-role { font-size: 10px; color: #8b949e; margin-bottom: 3px; }
+    /* Input */
+    .chat-input {
+      padding: 10px 14px; border-top: 1px solid #30363d;
+      background: #161b22;
+    }
+    .chat-input-wrap { display: flex; gap: 8px; }
+    .chat-input textarea {
+      flex: 1; padding: 8px 12px; border-radius: 6px;
+      border: 1px solid #30363d; background: #21262d; color: #e6edf3;
+      font-size: 13px; font-family: inherit; resize: vertical;
+      outline: none; min-height: 36px; max-height: 120px;
+    }
+    .chat-input textarea:focus { border-color: #58a6ff; }
+    /* Empty state */
+    .empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#8b949e; text-align:center; padding:40px; }
+    .empty-icon { font-size: 48px; margin-bottom: 14px; opacity: .5; }
+    .empty-text { font-size: 16px; margin-bottom: 6px; }
+    .empty-hint { font-size: 12px; opacity: .7; }
+    /* Terminal */
+    .terminal { height: 180px; border-top: 1px solid #30363d; background: #000; position: relative; }
+    .terminal-header {
+      position: absolute; top: 0; right: 0; padding: 2px 8px; z-index: 2;
+      font-size: 11px; color: #8b949e;
+    }
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 20px; width: 380px;
+    }
+    .modal h3 { margin-bottom: 14px; font-size: 16px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; margin-bottom: 3px; font-size: 12px; color: #8b949e; }
+    .field input, .field select {
+      width: 100%; padding: 7px 10px; border-radius: 5px;
+      border: 1px solid #30363d; background: #21262d; color: #e6edf3;
+      font-size: 13px; font-family: inherit; outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: #58a6ff; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    /* Split */
+    .split { display: flex; flex: 1; overflow: hidden; }
+    .split .chat { flex: 1; min-width: 0; }
+    .diff-panel { width: 360px; border-left: 1px solid #30363d; overflow-y: auto; padding: 10px; }
+    .diff-file { padding: 8px; border: 1px solid #30363d; border-radius: 5px; margin-bottom: 6px; }
+    .diff-file-name { font-weight: 600; font-size: 12px; }
+    .diff-hunk { color: #8b949e; font-size: 11px; font-family: monospace; margin-top: 4px; }
+    .diff-add { color: #3fb950; }
+    .diff-del { color: #f85149; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

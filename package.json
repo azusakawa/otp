@@ -1,0 +1,19 @@
+﻿{
+  "name": "otp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal AI coding agent orchestrator — OpenCode & Hermes",
+  "workspaces": ["core", "cli", "gui"],
+  "scripts": {
+    "build:core": "pnpm -F @otp/core build",
+    "build:cli": "pnpm -F @otp/cli build",
+    "build:gui": "pnpm -F @otp/gui build",
+    "build": "pnpm build:core && pnpm build:cli && pnpm build:gui",
+    "dev:gui": "pnpm -F @otp/gui dev",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "engines": { "node": ">=20" }
+}
