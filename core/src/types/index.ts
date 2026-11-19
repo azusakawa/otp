@@ -3,22 +3,22 @@
 /** Registered agent type */
 export type AgentType = 'opencode' | 'hermes';
 
-/** Name used in CLI for each agent */
-export const AGENT_CLI_BIN = {
+/** CLI binary name for each agent */
+export const AGENT_CLI_BIN: Record<AgentType, string> = {
   opencode: 'opencode',
   hermes: 'hermes',
-} as const;
+};
 
 /** Human-readable display name */
 export const AGENT_DISPLAY_NAME: Record<AgentType, string> = {
   opencode: 'OpenCode',
-  hermes: 'Hermes Agent',
+  hermes: 'Hermes',
 };
 
-/** Icon file name (will be resolved at runtime) */
+/** Emoji icon for each agent */
 export const AGENT_ICON: Record<AgentType, string> = {
-  opencode: 'opencode.png',
-  hermes: 'hermes.png',
+  opencode: '🔵',
+  hermes: '🟣',
 };
 
 /** Agent capabilities */
@@ -55,12 +55,8 @@ export interface Message {
 }
 
 /** Current session state */
-export enum SessionStatus {
-  Idle = 'idle',
-  Running = 'running',
-  Paused = 'paused',
-  Error = 'error',
-}
+/** Session status string literal union (canonical source) */
+export type SessionStatus = 'idle' | 'running' | 'paused' | 'error';
 
 /** A session = one agent conversation attached to a worktree */
 export interface Session {

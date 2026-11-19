@@ -1,7 +1,8 @@
 ﻿#!/usr/bin/env node
 import { Command } from 'commander';
 import { WorktreeStore, SessionStore, agentName, agentIcon, agentCliBin } from '@otp/core';
-import { join, homedir } from 'node:path';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { startAgent } from '@otp/core/agent.js';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';

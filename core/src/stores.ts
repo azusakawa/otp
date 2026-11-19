@@ -1,6 +1,6 @@
 ﻿import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { SessionSchema, WorktreeSchema, type Session, type Worktree, generateId } from './schema.js';
+import { SessionSchema, WorktreeSchema, type Session, type Worktree, generateId } from './types/schema.js';
 
 /* ── SessionStore ───────────────────────────────────────────────────────── */
 

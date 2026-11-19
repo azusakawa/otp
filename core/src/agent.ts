@@ -6,6 +6,7 @@ export interface AgentProcess {
   stdin: import('node:stream').Writable;
   stdout: import('node:stream').Readable;
   stderr: import('node:stream').Readable;
+  process: import('node:child_process').ChildProcess;
   stop(): void;
 }
 
@@ -23,6 +24,7 @@ export function startAgent(agentType: 'opencode' | 'hermes', worktreePath: strin
     stdin: proc.stdin,
     stdout: proc.stdout!,
     stderr: proc.stderr!,
+    process: proc,
     stop() { proc.kill('SIGTERM'); },
   };
 }

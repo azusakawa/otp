@@ -1,13 +1,13 @@
-﻿import type { z } from 'zod';
+﻿import z from 'zod';
 
-/* ── Zod schemas ────────────────────────────────────────────────────────── */
+/* ── Agent Zod schemas ──────────────────────────────────────────────────── */
 
 export const AgentTypeId = z.union([z.literal('opencode'), z.literal('hermes')]);
 export type AgentTypeId = z.infer<typeof AgentTypeId>;
 
 export const AgentName = z.object({
   opencode: z.literal('OpenCode'),
-  hermes: z.literal('Hermes Agent'),
+  hermes: z.literal('Hermes'),
 });
 
 export const AgentIcon = z.object({
@@ -31,13 +31,7 @@ export const AgentCapabilities = z.object({
   }),
 });
 
-export const SessionStatus = z.union([
-  z.literal('idle'),
-  z.literal('running'),
-  z.literal('paused'),
-  z.literal('error'),
-]);
-export type SessionStatus = z.infer<typeof SessionStatus>;
+/* ── Message / Session Zod schemas ──────────────────────────────────────── */
 
 export const MessageType = z.union([z.literal('user'), z.literal('assistant'), z.literal('system')]);
 export type MessageType = z.infer<typeof MessageType>;
@@ -54,7 +48,7 @@ export const SessionSchema = z.object({
   id: z.string(),
   worktreeId: z.string(),
   agentType: AgentTypeId,
-  status: SessionStatus,
+  status: z.union([z.literal('idle'), z.literal('running'), z.literal('paused'), z.literal('error')]),
   messages: z.array(MessageSchema),
   pid: z.number().optional(),
   cwd: z.string().optional(),
@@ -91,15 +85,18 @@ export function generateId(): string {
 }
 
 export function agentName(agentType: AgentTypeId): string {
-  return AgentName.shape[agentType]._;
+  return AgentName.shape[agentType].value;
 }
 
 export function agentIcon(agentType: AgentTypeId): string {
-  return AgentIcon.shape[agentType]._;
+  return AgentIcon.shape[agentType].value;
 }
 
 export function agentCliBin(agentType: AgentTypeId): string {
-  return AgentCliBin.shape[agentType]._;
+  return AgentCliBin.shape[agentType].value;
 }
 
-export const capabilities = AgentCapabilities.shape as Record<AgentTypeId, { chat: boolean; terminal: boolean }>;
+export const capabilities: Record<AgentTypeId, { chat: boolean; terminal: boolean }> = {
+  opencode: { chat: true, terminal: true },
+  hermes: { chat: true, terminal: true },
+};
