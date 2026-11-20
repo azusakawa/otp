@@ -1,7 +1,19 @@
-﻿// ── Agent Types ──────────────────────────────────────────────────────────
+﻿// Schema (zod) is the single source for core data models.
+export type {
+  AgentTypeId,
+  MessageType,
+  Message,
+  Session,
+  Worktree,
+  AppConfig,
+  SessionStatus,
+} from './schema.js';
+import type { AppConfig } from './schema.js';
 
-/** Registered agent type */
-export type AgentType = 'opencode' | 'hermes';
+export { SessionSchema, WorktreeSchema, MessageSchema, AppConfigSchema, generateId } from './schema.js';
+
+/** Registered agent type (alias of schema AgentTypeId). */
+export type AgentType = import('./schema.js').AgentTypeId;
 
 /** CLI binary name for each agent */
 export const AGENT_CLI_BIN: Record<AgentType, string> = {
@@ -44,51 +56,6 @@ export const AGENT_CAPABILITIES: Record<AgentType, AgentCapability> = {
   },
 };
 
-// ── Session Types ────────────────────────────────────────────────────────
-
-/** A single turn in a conversation */
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-}
-
-/** Current session state */
-/** Session status string literal union (canonical source) */
-export type SessionStatus = 'idle' | 'running' | 'paused' | 'error';
-
-/** A session = one agent conversation attached to a worktree */
-export interface Session {
-  id: string;
-  worktreeId: string;
-  agentType: AgentType;
-  status: SessionStatus;
-  messages: Message[];
-  createdAt: number;
-  updatedAt: number;
-  /** PID of the running agent process, if any */
-  pid?: number;
-  /** Working directory override */
-  cwd?: string;
-}
-
-// ── Worktree Types ───────────────────────────────────────────────────────
-
-/** A Git worktree (isolated dev environment) */
-export interface Worktree {
-  id: string;
-  name: string;
-  path: string;
-  /** Main branch */
-  mainBranch: string;
-  /** Worktree branch */
-  branch: string;
-  createdAt: number;
-  /** Associated session IDs */
-  sessionIds: string[];
-}
-
 // ── Orchestration Types ──────────────────────────────────────────────────
 
 /** Task handed to a coordinator agent */
@@ -103,18 +70,6 @@ export interface OrchestrationTask {
 }
 
 // ── Config Types ─────────────────────────────────────────────────────────
-
-/** User configuration */
-export interface AppConfig {
-  /** Default agent type */
-  defaultAgent: AgentType;
-  /** Worktrees base directory */
-  worktreesDir: string;
-  /** Data directory for session storage */
-  dataDir: string;
-  /** Theme: light | dark */
-  theme: 'light' | 'dark';
-}
 
 export const DEFAULT_CONFIG: AppConfig = {
   defaultAgent: 'opencode',

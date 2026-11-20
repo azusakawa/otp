@@ -14,23 +14,33 @@ interface Message {
 interface Session {
   id: string; worktreeId: string; agentType: 'opencode' | 'hermes';
   status: 'idle' | 'running' | 'error'; messages: Message[];
-  pid?: number; cwd?: string; createdAt: number; updatedAt: number;
+  pid?: number; cwd?: string; agentSessionId?: string;
+  createdAt: number; updatedAt: number;
+}
+
+interface StreamState {
+  agent: string;
+  error: string;
 }
 
 declare global {
   interface Window {
     otp: {
-      worktrees: { list(): Promise<Worktree[]>; create(n: string, p: string): Promise<Worktree>; delete(id: string): Promise<boolean> };
+      worktrees: {
+        list(): Promise<Worktree[]>;
+        create(n: string, p: string): Promise<Worktree | { error: string }>;
+        delete(id: string): Promise<boolean>;
+      };
       sessions: {
         list(): Promise<Session[]>;
         create(wtId: string, agent: 'opencode' | 'hermes'): Promise<Session>;
-        start(id: string): Promise<{ pid: number; error?: string }>;
+        run(id: string, prompt: string): Promise<{ pid?: number; error?: string }>;
         stop(id: string): Promise<{ ok: boolean }>;
-        send(id: string, msg: string): Promise<{ ok: boolean }>;
         get(id: string): Promise<Session | undefined>;
         delete(id: string): Promise<boolean>;
       };
       onAgentOutput: (cb: (d: any) => void) => void;
+      onSessionUpdated: (cb: (s: Session) => void) => void;
     };
   }
 }
@@ -60,13 +70,13 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 function Sidebar({
-  worktrees, sessions, activeId, onSelect, onCreateWt, onOpenCreateWt, onNewSession,
-  onStart, onStop, onDeleteWt, onDeleteSession,
+  worktrees, sessions, activeId, onSelect, onOpenCreateWt, onNewSession,
+  onStop, onDeleteWt, onDeleteSession,
 }: {
   worktrees: Worktree[]; sessions: Session[]; activeId: string | null;
-  onSelect: (id: string) => void; onCreateWt: () => void; onOpenCreateWt: () => void;
+  onSelect: (id: string) => void; onOpenCreateWt: () => void;
   onNewSession: (wtId: string, agent: 'opencode' | 'hermes') => void;
-  onStart: (id: string) => void; onStop: (id: string) => void;
+  onStop: (id: string) => void;
   onDeleteWt: (id: string) => void; onDeleteSession: (id: string) => void;
 }) {
   const { t, lng, setLang } = useT();
@@ -117,9 +127,6 @@ function Sidebar({
               </div>
               <div className="card-meta">{t('sidebar.messagesCount', { count: s.messages.length })}</div>
               <div className="card-actions">
-                {s.status === 'idle' && (
-                  <button className="btn btn-sm btn-primary" onClick={e => { e.stopPropagation(); onStart(s.id); }}>{t('session.start')}</button>
-                )}
                 {s.status === 'running' && (
                   <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onStop(s.id); }}>{t('session.stop')}</button>
                 )}
@@ -135,20 +142,39 @@ function Sidebar({
 }
 
 /* ── Chat ───────────────────────────────────────────────────────────────── */
-function Chat({ session, onSend, onStop }: {
-  session: Session | null; onSend: (msg: string) => void; onStop: () => void;
+function Chat({ session, stream, onSend, onStop }: {
+  session: Session | null;
+  stream?: StreamState;
+  onSend: (msg: string) => void;
+  onStop: () => void;
 }) {
   const { t } = useT();
   const [input, setInput] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
+  const displayMessages: Message[] = (() => {
+    if (!session) return [];
+    const msgs = [...session.messages];
+    if (session.status === 'running' && stream) {
+      if (stream.agent || !stream.error) {
+        msgs.push({ id: '__streaming', role: 'assistant', content: stream.agent, timestamp: Date.now() });
+      }
+      if (stream.error) {
+        msgs.push({ id: '__stream_error', role: 'system', content: stream.error, timestamp: Date.now() });
+      }
+    }
+    return msgs;
+  })();
+
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [session?.messages]);
+  }, [session?.id, session?.messages.length, stream?.agent, stream?.error]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) { onSend(input.trim()); setInput(''); }
+    if (!input.trim() || session?.status === 'running') return;
+    onSend(input.trim());
+    setInput('');
   };
 
   if (!session) {
@@ -182,12 +208,12 @@ function Chat({ session, onSend, onStop }: {
 
       {/* Messages */}
       <div className="chat" ref={chatRef}>
-        {session.messages.length === 0 && (
+        {displayMessages.length === 0 && (
           <div style={{ padding: '32px 0', textAlign: 'center', color: '#8b949e', fontSize: 13 }}>
             {t('chat.noMessages')}
           </div>
         )}
-        {session.messages.map((m) => (
+        {displayMessages.map((m) => (
           <div className={`msg msg-${m.role}`} key={m.id}>
             <div className="msg-role">{t(`role.${m.role}`)}</div>
             <div className="msg-bubble">{m.content}</div>
@@ -205,7 +231,7 @@ function Chat({ session, onSend, onStop }: {
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e); } }}
             rows={2}
           />
-          <button type="submit" className="btn btn-primary" disabled={!input.trim()}>{t('chat.send')}</button>
+          <button type="submit" className="btn btn-primary" disabled={!input.trim() || session.status === 'running'}>{t('chat.send')}</button>
         </form>
       </div>
     </div>
@@ -235,8 +261,8 @@ function DiffPanel({ worktree }: { worktree: Worktree | undefined }) {
           <div className="diff-hunk">
             {d.hunks?.map((h: any, j: number) => (
               <div key={j}>
-                {h.adds?.map((a: string) => <div className="diff-add" key={j+'a'}>+ {a}</div>)}
-                {h.deletes?.map((dl: string) => <div className="diff-del" key={j+'d'}>- {dl}</div>)}
+                {h.adds?.map((a: string, k: number) => <div className="diff-add" key={`${j}-a-${k}`}>+ {a}</div>)}
+                {h.deletes?.map((dl: string, k: number) => <div className="diff-del" key={`${j}-d-${k}`}>- {dl}</div>)}
               </div>
             ))}
           </div>
@@ -247,25 +273,35 @@ function DiffPanel({ worktree }: { worktree: Worktree | undefined }) {
 }
 
 /* ── Terminal ───────────────────────────────────────────────────────────── */
-function TerminalPanel({ session }: { session: Session | null }) {
+function TerminalPanel({ session, stream }: { session: Session | null; stream?: StreamState }) {
   const { t } = useT();
   const termRef = useRef<HTMLDivElement>(null);
 
+  const text = (stream?.agent ?? '') + (stream?.error ?? '');
+
   useEffect(() => {
-    if (!termRef.current) return;
-    // xterm.js would be mounted here
-    // For now, show output log
-  }, [session]);
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
+  }, [text]);
+
+  const showRaw = session?.status === 'running';
 
   return (
     <div className="terminal">
       <div className="terminal-header">{t('terminal.title')}</div>
-      <div ref={termRef} style={{
-        padding: '8px 12px', fontFamily: 'monospace', fontSize: 12,
-        overflow: 'auto', height: '100%', color: '#c9d1d9',
-      }}>
-        {session?.status === 'running' ? (
-          <div style={{ color: '#8b949e' }}>{t('terminal.waiting')}</div>
+      <div
+        ref={termRef}
+        style={{
+          padding: '8px 12px',
+          fontFamily: 'monospace',
+          fontSize: 12,
+          overflow: 'auto',
+          height: '100%',
+          color: '#c9d1d9',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {showRaw ? (
+          text ? text : <div style={{ color: '#8b949e' }}>{t('terminal.rawLog')}</div>
         ) : (
           <div style={{ color: '#8b949e' }}>{t('terminal.hint')}</div>
         )}
@@ -284,29 +320,41 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [wtName, setWtName] = useState('');
   const [wtPath, setWtPath] = useState('');
+  const [wtError, setWtError] = useState('');
+  const [streams, setStreams] = useState<Record<string, StreamState>>({});
 
   const activeWt = worktrees.find(w => w.id === activeWtId);
   const activeSession = sessions.find(s => s.id === activeSessionId);
+  const activeStream = activeSessionId ? streams[activeSessionId] : undefined;
 
   // Initial load
   useEffect(() => {
     refresh();
   }, []);
 
-  // Listen for agent output
+  // Listen for agent output and session updates
   useEffect(() => {
     window.otp.onAgentOutput((data) => {
-      if (data.session === activeSessionId) {
-        setSessions(prev => prev.map(s => {
-          if (s.id !== data.session) return s;
-          const role = data.label === 'error' ? 'system' as const : 'assistant' as const;
-          return { ...s, messages: [...s.messages, {
-            id: `${Date.now()}-${Math.random()}`, role, content: data.text, timestamp: Date.now(),
-          }], updatedAt: Date.now() };
-        }));
-      }
+      setStreams(prev => {
+        const cur = prev[data.session] ?? { agent: '', error: '' };
+        return {
+          ...prev,
+          [data.session]: {
+            agent: cur.agent + (data.label === 'agent' ? data.text : ''),
+            error: cur.error + (data.label === 'error' ? data.text : ''),
+          },
+        };
+      });
     });
-  }, [activeSessionId]);
+    window.otp.onSessionUpdated((s2) => {
+      setSessions(prev => prev.map(s => (s.id === s2.id ? s2 : s)));
+      setStreams(prev => {
+        const n = { ...prev };
+        delete n[s2.id];
+        return n;
+      });
+    });
+  }, []);
 
   const refresh = async () => {
     const [wt, ss] = await Promise.all([
@@ -319,8 +367,16 @@ function App() {
 
   const handleCreateWt = async () => {
     if (!wtName.trim() || !wtPath.trim()) return;
+    setWtError('');
     const wt = await window.otp.worktrees.create(wtName.trim(), wtPath.trim());
-    setWtName(''); setWtPath(''); setShowModal(false);
+    if (wt && typeof wt === 'object' && 'error' in wt && wt.error) {
+      setWtError(wt.error);
+      return;
+    }
+    setWtName('');
+    setWtPath('');
+    setWtError('');
+    setShowModal(false);
     await refresh();
   };
 
@@ -336,19 +392,22 @@ function App() {
     setActiveWtId(wtId);
   };
 
-  const handleStart = async (id: string) => {
-    await window.otp.sessions.start(id);
-    await refresh();
-  };
-
   const handleStop = async (id: string) => {
     await window.otp.sessions.stop(id);
-    await refresh();
   };
 
   const handleSend = async (msg: string) => {
     if (!activeSessionId) return;
-    await window.otp.sessions.send(activeSessionId, msg);
+    const r = await window.otp.sessions.run(activeSessionId, msg);
+    if (r?.error) {
+      setStreams(prev => ({
+        ...prev,
+        [activeSessionId]: {
+          agent: prev[activeSessionId]?.agent ?? '',
+          error: (prev[activeSessionId]?.error ?? '') + t('chat.runError', { error: r.error }),
+        },
+      }));
+    }
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -367,27 +426,27 @@ function App() {
           if (s) setActiveSessionId(s.id);
           setActiveWtId(id);
         }}
-        onCreateWt={() => setShowModal(true)}
-        onOpenCreateWt={() => setShowModal(true)}
+        onOpenCreateWt={() => { setWtError(''); setShowModal(true); }}
         onNewSession={handleNewSession}
-        onStart={handleStart} onStop={handleStop}
+        onStop={handleStop}
         onDeleteWt={handleDeleteWt} onDeleteSession={handleDeleteSession}
       />
 
       <div className="main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Chat
           session={activeSession || null}
+          stream={activeStream}
           onSend={handleSend}
           onStop={() => activeSessionId && handleStop(activeSessionId)}
         />
-        <TerminalPanel session={activeSession || null} />
+        <TerminalPanel session={activeSession || null} stream={activeStream} />
       </div>
 
       <DiffPanel worktree={activeWt} />
 
       {/* New Worktree Modal */}
       {showModal && (
-        <Modal title={t('modal.createTaskTree')} onClose={() => setShowModal(false)}>
+        <Modal title={t('modal.createTaskTree')} onClose={() => { setShowModal(false); setWtError(''); }}>
           <div className="field">
             <label>{t('modal.name')}</label>
             <input value={wtName} onChange={e => setWtName(e.target.value)} placeholder={t('modal.namePlaceholder')} autoFocus />
@@ -396,8 +455,9 @@ function App() {
             <label>{t('modal.gitPath')}</label>
             <input value={wtPath} onChange={e => setWtPath(e.target.value)} placeholder="~/projects/my-repo" />
           </div>
+          {wtError && <div style={{ color: '#f85149', fontSize: 12, marginTop: 8 }}>{wtError}</div>}
           <div className="modal-actions">
-            <button className="btn" onClick={() => setShowModal(false)}>{t('modal.cancel')}</button>
+            <button className="btn" onClick={() => { setShowModal(false); setWtError(''); }}>{t('modal.cancel')}</button>
             <button className="btn btn-primary" onClick={handleCreateWt}>{t('modal.create')}</button>
           </div>
         </Modal>

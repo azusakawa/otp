@@ -9,13 +9,15 @@ contextBridge.exposeInMainWorld('otp', {
   sessions: {
     list: () => ipcRenderer.invoke('session:list'),
     create: (wtId: string, agent: 'opencode' | 'hermes') => ipcRenderer.invoke('session:create', wtId, agent),
-    start: (id: string) => ipcRenderer.invoke('session:start', id),
+    run: (id: string, prompt: string) => ipcRenderer.invoke('session:run', id, prompt),
     stop: (id: string) => ipcRenderer.invoke('session:stop', id),
-    send: (id: string, msg: string) => ipcRenderer.invoke('session:send', id, msg),
     get: (id: string) => ipcRenderer.invoke('session:get', id),
     delete: (id: string) => ipcRenderer.invoke('session:delete', id),
   },
   onAgentOutput: (cb: (data: any) => void) => {
     ipcRenderer.on('agent-output', (_e, data) => cb(data));
+  },
+  onSessionUpdated: (cb: (s: any) => void) => {
+    ipcRenderer.on('session-updated', (_e, s) => cb(s));
   },
 });

@@ -36,7 +36,7 @@ const en: Record<string, SectionDict> = {
     messagesCount: '{{count}} messages',
   },
   status: { running: '● Running', idle: '○ Idle', error: '✕ Error' },
-  session: { start: '▶ Start', stop: '⏹ Stop', duplicate: '+ Duplicate' },
+  session: { stop: '⏹ Stop', duplicate: '+ Duplicate' },
   chat: {
     welcome: 'Welcome to OTP',
     welcomeHint: 'Create a task tree on the left → pick an agent → start collaborating',
@@ -45,6 +45,7 @@ const en: Record<string, SectionDict> = {
     inputRunning: 'Type a message to send to the agent...',
     inputIdle: 'Start the session to send messages',
     send: 'Send →',
+    runError: 'Run failed: {{error}}',
   },
   role: { user: 'user', assistant: 'assistant', system: 'system' },
   diff: { title: '📋 Changes: {{name}}', none: 'No changes yet' },
@@ -52,6 +53,7 @@ const en: Record<string, SectionDict> = {
     title: 'Terminal Output',
     waiting: 'Waiting for agent output...',
     hint: 'Start an agent to see output here',
+    rawLog: 'Raw output',
   },
   modal: {
     createTaskTree: 'New Task Tree',
@@ -73,7 +75,7 @@ const zhTW: Record<string, SectionDict> = {
     messagesCount: '{{count}} 則訊息',
   },
   status: { running: '● 執行中', idle: '○ 閒置', error: '✕ 錯誤' },
-  session: { start: '▶ 啟動', stop: '⏹ 停止', duplicate: '+ 副本' },
+  session: { stop: '⏹ 停止', duplicate: '+ 副本' },
   chat: {
     welcome: '歡迎使用 OTP',
     welcomeHint: '左側建立任務樹 → 選智能體 → 啟動開始協作',
@@ -82,6 +84,7 @@ const zhTW: Record<string, SectionDict> = {
     inputRunning: '輸入訊息發送給智能體...',
     inputIdle: '啟動後可發送訊息',
     send: '發送 →',
+    runError: '執行失敗：{{error}}',
   },
   role: { user: '使用者', assistant: '智能體', system: '系統' },
   diff: { title: '📋 變更 {{name}}', none: '暫無變更' },
@@ -89,6 +92,7 @@ const zhTW: Record<string, SectionDict> = {
     title: '終端輸出',
     waiting: '等待智能體輸出...',
     hint: '啟動智能體後在此顯示輸出',
+    rawLog: '原始輸出',
   },
   modal: {
     createTaskTree: '建立任務樹',

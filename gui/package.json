@@ -9,6 +9,17 @@
     "start": "electron .",
     "typecheck": "tsc --noEmit"
   },
+  "build": {
+    "appId": "com.otp.desktop",
+    "productName": "OTP",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "dir",
+      "signAndEditExecutable": false
+    }
+  },
   "dependencies": {
     "@otp/core": "workspace:*",
     "react": "^18.3.0",

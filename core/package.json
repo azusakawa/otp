@@ -10,10 +10,6 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./agent.js": {
-      "import": "./dist/agent.js",
-      "types": "./dist/agent.d.ts"
-    },
     "./types/schema.js": {
       "import": "./dist/types/schema.js",
       "types": "./dist/types/schema.d.ts"

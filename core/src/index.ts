@@ -1,17 +1,49 @@
 ﻿export {
-  agentName, agentIcon, agentCliBin, capabilities,
-  type AgentTypeId, type MessageType, type Message,
-  type Session, type Worktree, type AppConfig,
+  agentName,
+  agentIcon,
+  agentCliBin,
+  capabilities,
+  generateId,
+  type AgentTypeId,
+  type MessageType,
+  type Message,
+  type Session,
+  type Worktree,
+  type AppConfig,
+  type SessionStatus,
   // Zod schemas
   AgentTypeId as AgentTypeIdSchema,
-  MessageSchema, SessionSchema, WorktreeSchema, AppConfigSchema,
-  AgentName, AgentIcon, AgentCliBin, AgentCapabilities,
+  MessageSchema,
+  SessionSchema,
+  WorktreeSchema,
+  AppConfigSchema,
+  SessionStatusSchema,
+  AgentName,
+  AgentIcon,
+  AgentCliBin,
+  AgentCapabilities,
 } from './types/schema.js';
 
-export { type SessionStatus } from './types/index.js';
+export {
+  type AgentType,
+  AGENT_CLI_BIN,
+  AGENT_DISPLAY_NAME,
+  AGENT_ICON,
+  type AgentCapability,
+  AGENT_CAPABILITIES,
+  type OrchestrationTask,
+  DEFAULT_CONFIG,
+} from './types/index.js';
 
 export { SessionStore, WorktreeStore } from './stores.js';
 
-export { startAgent, type AgentProcess } from './agent.js';
+export {
+  runAgentTurn,
+  killAgent,
+  type AgentRun,
+  type RunAgentTurnOpts,
+} from './agent/process.js';
 
-export { generateId } from './types/schema.js';
+export { otpDataDir, otpWorktreesDir } from './config.js';
+
+export { appendMessage } from './helpers/index.js';

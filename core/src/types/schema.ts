@@ -44,14 +44,23 @@ export const MessageSchema = z.object({
 });
 export type Message = z.infer<typeof MessageSchema>;
 
+export const SessionStatusSchema = z.union([
+  z.literal('idle'),
+  z.literal('running'),
+  z.literal('paused'),
+  z.literal('error'),
+]);
+export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+
 export const SessionSchema = z.object({
   id: z.string(),
   worktreeId: z.string(),
   agentType: AgentTypeId,
-  status: z.union([z.literal('idle'), z.literal('running'), z.literal('paused'), z.literal('error')]),
+  status: SessionStatusSchema,
   messages: z.array(MessageSchema),
   pid: z.number().optional(),
   cwd: z.string().optional(),
+  agentSessionId: z.string().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -63,6 +72,7 @@ export const WorktreeSchema = z.object({
   path: z.string(),
   mainBranch: z.string(),
   branch: z.string(),
+  repoPath: z.string().optional(),
   createdAt: z.number(),
   sessionIds: z.array(z.string()),
 });
