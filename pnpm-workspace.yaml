@@ -2,3 +2,8 @@ packages:
   - core
   - cli
   - gui
+
+# Allow lifecycle scripts (binary download) for these dependencies.
+allowBuilds:
+  electron: true
+  esbuild: true

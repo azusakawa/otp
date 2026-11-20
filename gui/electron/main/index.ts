@@ -21,7 +21,8 @@ function createWindow(): void {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
     win.webContents.openDevTools();
   } else {
-    win.loadFile(join(__dirname, '..', 'dist', 'renderer', 'index.html'));
+    // __dirname = <gui>/dist/electron/main → up two levels is <gui>/dist
+    win.loadFile(join(__dirname, '..', '..', 'renderer', 'index.html'));
   }
   win.on('closed', () => { win.removeAllListeners(); });
 }

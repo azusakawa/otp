@@ -2,10 +2,11 @@
   "name": "@otp/gui",
   "version": "0.1.0",
   "private": true,
-  "main": "electron/main/index.ts",
+  "main": "dist/electron/main/index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build && electron-builder",
+    "start": "electron .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
