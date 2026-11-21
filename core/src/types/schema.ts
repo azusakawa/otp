@@ -54,7 +54,9 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 
 export const SessionSchema = z.object({
   id: z.string(),
-  worktreeId: z.string(),
+  // Optional: quick ("idea") sessions have no worktree and run in a private
+  // scratch workspace instead.
+  worktreeId: z.string().optional(),
   agentType: AgentTypeId,
   status: SessionStatusSchema,
   messages: z.array(MessageSchema),

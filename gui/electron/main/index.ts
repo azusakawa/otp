@@ -1,5 +1,7 @@
 ﻿import { app, BrowserWindow, ipcMain } from 'electron';
-import { WorktreeStore, SessionStore, runAgentTurn, otpDataDir } from '@otp/core';
+import { WorktreeStore, SessionStore, runAgentTurn, otpDataDir, otpScratchDir } from '@otp/core';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -58,17 +60,35 @@ ipcMain.handle('wt:delete', (_e, id: string) => worktrees.delete(id));
 
 ipcMain.handle('session:list', () => sessions.all());
 
-ipcMain.handle('session:create', (_e, wtId: string, agentType: 'opencode' | 'hermes') => {
-  const s = sessions.create(wtId, agentType);
-  worktrees.addSession(wtId, s.id);
-  return s;
+// wtId === null/undefined → quick session (no project): private scratch
+// workspace at ~/.otp/scratch/<sessionId>/, git-initialized.
+ipcMain.handle('session:create', (_e, wtId: string | null | undefined, agentType: 'opencode' | 'hermes') => {
+  if (wtId) {
+    const s = sessions.create(agentType, { worktreeId: wtId });
+    worktrees.addSession(wtId, s.id);
+    return s;
+  }
+  const id = randomUUID();
+  const dir = join(otpScratchDir(), id);
+  mkdirSync(dir, { recursive: true });
+  spawnSync('git', ['init'], { cwd: dir, encoding: 'utf-8' });
+  return sessions.create(agentType, { cwd: dir, id });
 });
 
 ipcMain.handle('session:run', async (_e, sessionId: string, prompt: string) => {
   const s = sessions.get(sessionId);
   if (!s) return { error: 'Session not found' };
-  const wt = worktrees.get(s.worktreeId);
-  if (!wt) return { error: 'Worktree not found' };
+  // Worktree sessions run in the worktree path; quick sessions in their
+  // private scratch workspace (recorded as session.cwd at creation).
+  let cwd: string;
+  if (s.worktreeId) {
+    const wt = worktrees.get(s.worktreeId);
+    if (!wt) return { error: 'Worktree not found' };
+    cwd = wt.path;
+  } else {
+    if (!s.cwd) return { error: 'Session has no working directory' };
+    cwd = s.cwd;
+  }
   if (running.has(sessionId)) return { error: 'Already running' };
 
   sessions.update(sessionId, {
@@ -84,7 +104,7 @@ ipcMain.handle('session:run', async (_e, sessionId: string, prompt: string) => {
   const run = runAgentTurn({
     agentType: s.agentType,
     prompt,
-    cwd: wt.path,
+    cwd,
     otpSessionId: s.id,
     agentSessionId: s.agentSessionId,
     onOutput: (chunk, label) => {
@@ -113,7 +133,7 @@ ipcMain.handle('session:run', async (_e, sessionId: string, prompt: string) => {
   });
 
   running.set(sessionId, run);
-  sessions.update(sessionId, { status: 'running', pid: run.pid, agentSessionId, cwd: wt.path });
+  sessions.update(sessionId, { status: 'running', pid: run.pid, agentSessionId, cwd });
   broadcast('session-updated', sessions.get(sessionId));
   return { pid: run.pid };
 });
@@ -137,7 +157,27 @@ ipcMain.handle('session:delete', (_e, sessionId: string) => {
   }
   running.delete(sessionId);
   stopped.delete(sessionId);
+  // Quick-session scratch workspaces are intentionally kept (artifacts may be
+  // worth keeping); they are removed via scratch:clear.
   return sessions.delete(sessionId);
+});
+
+// ── IPC: scratch workspaces (quick sessions) ─────────────────────────────
+
+// Removes every directory under ~/.otp/scratch (conversations are kept).
+ipcMain.handle('scratch:clear', () => {
+  const dir = otpScratchDir();
+  if (!existsSync(dir)) return { cleared: 0 };
+  let cleared = 0;
+  for (const entry of readdirSync(dir)) {
+    try {
+      rmSync(join(dir, entry), { recursive: true, force: true });
+      cleared++;
+    } catch {
+      /* ignore */
+    }
+  }
+  return { cleared };
 });
 
 app.whenReady().then(createWindow);

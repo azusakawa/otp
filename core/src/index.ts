@@ -44,6 +44,6 @@ export {
   type RunAgentTurnOpts,
 } from './agent/process.js';
 
-export { otpDataDir, otpWorktreesDir } from './config.js';
+export { otpDataDir, otpWorktreesDir, otpScratchDir } from './config.js';
 
 export { appendMessage } from './helpers/index.js';

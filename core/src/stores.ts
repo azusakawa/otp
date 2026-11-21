@@ -38,14 +38,17 @@ export class SessionStore {
     return this.cache.get(id);
   }
 
-  create(worktreeId: string, agentType: 'opencode' | 'hermes', cwd?: string): Session {
+  create(
+    agentType: 'opencode' | 'hermes',
+    opts: { worktreeId?: string; cwd?: string; id?: string } = {},
+  ): Session {
     const s: Session = {
-      id: generateId(),
-      worktreeId,
+      id: opts.id ?? generateId(),
+      worktreeId: opts.worktreeId,
       agentType,
       status: 'idle',
       messages: [],
-      cwd,
+      cwd: opts.cwd,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

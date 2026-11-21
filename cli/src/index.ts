@@ -1,6 +1,9 @@
 ﻿#!/usr/bin/env node
 import { Command } from 'commander';
-import { WorktreeStore, SessionStore, agentName, agentIcon, runAgentTurn, killAgent, otpDataDir } from '@otp/core';
+import { WorktreeStore, SessionStore, agentName, agentIcon, runAgentTurn, killAgent, otpDataDir, otpScratchDir } from '@otp/core';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const DATA_DIR = otpDataDir();
@@ -92,12 +95,27 @@ program.command('session').description('Manage sessions');
 
 program
   .command('session:create')
-  .description('Create a new session for a worktree')
+  .description('Create a new session (for a worktree, or project-free via --quick)')
   .option('-w, --worktree-id <id>', 'Worktree ID')
+  .option('--quick', 'Quick session without a project (private scratch workspace)')
   .option('-a, --agent <type>', 'Agent type (opencode|hermes)', 'opencode')
   .action((opts) => {
+    const agent = opts.agent as 'opencode' | 'hermes';
+    if (opts.quick) {
+      const id = randomUUID();
+      const dir = join(otpScratchDir(), id);
+      mkdirSync(dir, { recursive: true });
+      spawnSync('git', ['init'], { cwd: dir, encoding: 'utf-8' });
+      const s = sessions.create(agent, { cwd: dir, id });
+      console.log(`\n✓ Created quick session (no project): ${s.id}`);
+      console.log(`  Agent:  ${opts.agent}`);
+      console.log(`  Cwd:    ${s.cwd}`);
+      console.log(`  Status: ${s.status}`);
+      console.log(`  Run:    otp session:run ${s.id} -p "your prompt"\n`);
+      return;
+    }
     if (!opts.worktreeId) {
-      console.error('Error: --worktree-id required\n');
+      console.error('Error: --worktree-id or --quick required\n');
       process.exit(1);
     }
     const wt = wts.get(opts.worktreeId);
@@ -105,7 +123,7 @@ program
       console.error(`✗ Worktree not found: ${opts.worktreeId}\n`);
       process.exit(1);
     }
-    const s = sessions.create(wt.id, opts.agent as 'opencode' | 'hermes', wt.path);
+    const s = sessions.create(agent, { worktreeId: wt.id, cwd: wt.path });
     wts.addSession(wt.id, s.id);
     console.log(`\n✓ Created session: ${s.id}`);
     console.log(`  Agent:  ${opts.agent}`);
@@ -124,10 +142,22 @@ program
       console.error(`✗ Session not found: ${id}\n`);
       process.exit(1);
     }
-    const wt = wts.get(s.worktreeId);
-    if (!wt) {
-      console.error(`✗ Worktree not found: ${s.worktreeId}\n`);
-      process.exit(1);
+    // Worktree sessions run in the worktree path; quick sessions in their
+    // private scratch workspace (recorded as session.cwd at creation).
+    let cwd: string;
+    if (s.worktreeId) {
+      const wt = wts.get(s.worktreeId);
+      if (!wt) {
+        console.error(`✗ Worktree not found: ${s.worktreeId}\n`);
+        process.exit(1);
+      }
+      cwd = wt.path;
+    } else {
+      if (!s.cwd) {
+        console.error('✗ Session has no working directory\n');
+        process.exit(1);
+      }
+      cwd = s.cwd;
     }
 
     const prompt = String(opts.prompt);
@@ -141,7 +171,7 @@ program
     sessions.update(id, { messages: [...s.messages, userMessage] });
 
     console.log(
-      `\n▶ Running session ${s.id} | agent: ${agentName(s.agentType)} ${agentIcon(s.agentType)} | worktree: ${wt.path}\n`,
+      `\n▶ Running session ${s.id} | agent: ${agentName(s.agentType)} ${agentIcon(s.agentType)} | cwd: ${cwd}\n`,
     );
 
     let stdoutAll = '';
@@ -152,7 +182,7 @@ program
       const run = runAgentTurn({
         agentType: s.agentType,
         prompt,
-        cwd: wt.path,
+        cwd,
         otpSessionId: s.id,
         agentSessionId: s.agentSessionId,
         onOutput: (chunk, label) => {
@@ -176,7 +206,7 @@ program
         status: 'running',
         pid: run.pid,
         agentSessionId: latestAgentSessionId ?? s.agentSessionId,
-        cwd: wt.path,
+        cwd,
       });
     });
 
@@ -240,6 +270,27 @@ program
       );
     }
     console.log('');
+  });
+
+program
+  .command('scratch:clear')
+  .description('Remove all quick-session scratch workspaces (conversations are kept)')
+  .action(() => {
+    const dir = otpScratchDir();
+    if (!existsSync(dir)) {
+      console.log('Nothing to clear.\n');
+      return;
+    }
+    let cleared = 0;
+    for (const entry of readdirSync(dir)) {
+      try {
+        rmSync(join(dir, entry), { recursive: true, force: true });
+        cleared++;
+      } catch {
+        /* ignore */
+      }
+    }
+    console.log(`✓ Cleared ${cleared} scratch workspace(s)\n`);
   });
 
 program.parse();

@@ -12,7 +12,7 @@ interface Message {
 }
 
 interface Session {
-  id: string; worktreeId: string; agentType: 'opencode' | 'hermes';
+  id: string; worktreeId?: string; agentType: 'opencode' | 'hermes';
   status: 'idle' | 'running' | 'error'; messages: Message[];
   pid?: number; cwd?: string; agentSessionId?: string;
   createdAt: number; updatedAt: number;
@@ -33,11 +33,14 @@ declare global {
       };
       sessions: {
         list(): Promise<Session[]>;
-        create(wtId: string, agent: 'opencode' | 'hermes'): Promise<Session>;
+        create(wtId: string | null, agent: 'opencode' | 'hermes'): Promise<Session>;
         run(id: string, prompt: string): Promise<{ pid?: number; error?: string }>;
         stop(id: string): Promise<{ ok: boolean }>;
         get(id: string): Promise<Session | undefined>;
         delete(id: string): Promise<boolean>;
+      };
+      scratch: {
+        clear(): Promise<{ cleared: number }>;
       };
       onAgentOutput: (cb: (d: any) => void) => void;
       onSessionUpdated: (cb: (s: Session) => void) => void;
@@ -68,18 +71,50 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+/* ── Session card (shared by quick + worktree sessions) ─────────────────── */
+function SessionCard({ s, active, t, onSelect, onNewSession, onStop, onDelete }: {
+  s: Session; active: boolean; t: TFunc;
+  onSelect: (id: string) => void;
+  onNewSession: (wtId: string | null, agent: 'opencode' | 'hermes') => void;
+  onStop: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const ai = AGENT_INFO[s.agentType];
+  return (
+    <div className={`card ${active ? 'active' : ''}`} onClick={() => onSelect(s.id)}>
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontWeight: 600, fontSize: 12 }}>{ai.icon} {ai.name}</span>
+        <span className={`badge badge-${s.status}`}>
+          {statusLabel(t, s.status)}
+        </span>
+      </div>
+      <div className="card-meta">{t('sidebar.messagesCount', { count: s.messages.length })}</div>
+      <div className="card-actions">
+        {s.status === 'running' && (
+          <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onStop(s.id); }}>{t('session.stop')}</button>
+        )}
+        <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onNewSession(s.worktreeId ?? null, s.agentType); }}>{t('session.duplicate')}</button>
+        <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onDelete(s.id); }}>✕</button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 function Sidebar({
   worktrees, sessions, activeId, onSelect, onOpenCreateWt, onNewSession,
-  onStop, onDeleteWt, onDeleteSession,
+  onStop, onDeleteWt, onDeleteSession, onClearScratch,
 }: {
   worktrees: Worktree[]; sessions: Session[]; activeId: string | null;
   onSelect: (id: string) => void; onOpenCreateWt: () => void;
-  onNewSession: (wtId: string, agent: 'opencode' | 'hermes') => void;
+  onNewSession: (wtId: string | null, agent: 'opencode' | 'hermes') => void;
   onStop: (id: string) => void;
   onDeleteWt: (id: string) => void; onDeleteSession: (id: string) => void;
+  onClearScratch: () => void;
 }) {
   const { t, lng, setLang } = useT();
+  const treeSessions = sessions.filter(s => s.worktreeId);
+  const quickSessions = sessions.filter(s => !s.worktreeId);
   return (
     <div className="sidebar">
       <div className="sidebar-header">
@@ -113,29 +148,24 @@ function Sidebar({
           </div>
         ))}
 
-        <div className="sidebar-section">{t('sidebar.sessions', { count: sessions.length })}</div>
-        {sessions.length === 0 && <div style={{ padding: '8px 0', fontSize: 12, color: '#8b949e' }}>{t('sidebar.noSessions')}</div>}
-        {sessions.map(s => {
-          const ai = AGENT_INFO[s.agentType];
-          return (
-            <div className={`card ${activeId === s.id ? 'active' : ''}`} key={s.id} onClick={() => onSelect(s.id)}>
-              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>{ai.icon} {ai.name}</span>
-                <span className={`badge badge-${s.status}`}>
-                  {statusLabel(t, s.status)}
-                </span>
-              </div>
-              <div className="card-meta">{t('sidebar.messagesCount', { count: s.messages.length })}</div>
-              <div className="card-actions">
-                {s.status === 'running' && (
-                  <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onStop(s.id); }}>{t('session.stop')}</button>
-                )}
-                <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onNewSession(s.worktreeId, s.agentType); }}>{t('session.duplicate')}</button>
-                <button className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onDeleteSession(s.id); }}>✕</button>
-              </div>
-            </div>
-          );
-        })}
+        <div className="sidebar-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{t('sidebar.ideas', { count: quickSessions.length })}</span>
+          <span style={{ display: 'inline-flex', gap: 4 }}>
+            <button className="btn btn-sm" title={t('sidebar.newIdea')} onClick={() => onNewSession(null, 'opencode')}>🔵</button>
+            <button className="btn btn-sm" title={t('sidebar.newIdea')} onClick={() => onNewSession(null, 'hermes')}>🟣</button>
+            <button className="btn btn-sm" title={t('sidebar.clearScratch')} onClick={onClearScratch}>🧹</button>
+          </span>
+        </div>
+        {quickSessions.length === 0 && <div style={{ padding: '8px 0', fontSize: 12, color: '#8b949e' }}>{t('sidebar.noIdeas')}</div>}
+        {quickSessions.map(s => (
+          <SessionCard key={s.id} s={s} active={activeId === s.id} t={t} onSelect={onSelect} onNewSession={onNewSession} onStop={onStop} onDelete={onDeleteSession} />
+        ))}
+
+        <div className="sidebar-section">{t('sidebar.sessions', { count: treeSessions.length })}</div>
+        {treeSessions.length === 0 && <div style={{ padding: '8px 0', fontSize: 12, color: '#8b949e' }}>{t('sidebar.noSessions')}</div>}
+        {treeSessions.map(s => (
+          <SessionCard key={s.id} s={s} active={activeId === s.id} t={t} onSelect={onSelect} onNewSession={onNewSession} onStop={onStop} onDelete={onDeleteSession} />
+        ))}
       </div>
     </div>
   );
@@ -385,11 +415,16 @@ function App() {
     await refresh();
   };
 
-  const handleNewSession = async (wtId: string, agent: 'opencode' | 'hermes') => {
+  const handleNewSession = async (wtId: string | null, agent: 'opencode' | 'hermes') => {
     const s = await window.otp.sessions.create(wtId, agent);
     await refresh();
     setActiveSessionId(s.id);
-    setActiveWtId(wtId);
+    setActiveWtId(wtId); // null for quick sessions (clears any stale worktree)
+  };
+
+  const handleClearScratch = async () => {
+    if (!window.confirm(t('sidebar.clearScratchConfirm'))) return;
+    await window.otp.scratch.clear();
   };
 
   const handleStop = async (id: string) => {
@@ -421,15 +456,20 @@ function App() {
       <Sidebar
         worktrees={worktrees} sessions={sessions}
         activeId={activeSessionId}
-        onSelect={id => {
-          const s = sessions.find(s => s.worktreeId === id);
-          if (s) setActiveSessionId(s.id);
-          setActiveWtId(id);
+        onSelect={(id) => {
+          const s = sessions.find(x => x.id === id);
+          if (s) {
+            setActiveSessionId(id);
+            setActiveWtId(s.worktreeId ?? null);
+            return;
+          }
+          if (worktrees.some(w => w.id === id)) setActiveWtId(id);
         }}
         onOpenCreateWt={() => { setWtError(''); setShowModal(true); }}
         onNewSession={handleNewSession}
         onStop={handleStop}
         onDeleteWt={handleDeleteWt} onDeleteSession={handleDeleteSession}
+        onClearScratch={handleClearScratch}
       />
 
       <div className="main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
