@@ -10,6 +10,8 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-42a5f9?style=flat-square)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square)](https://nodejs.org)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M2V52B10UW)
+
 輕量級個人 AI 智能體編排器。
 
 [**快速開始**](#快速開始) · [**功能**](#功能) · [**CLI 參考**](#cli-參考) · [**架構**](#架構) · [**貢獻指南**](#貢獻指南)
