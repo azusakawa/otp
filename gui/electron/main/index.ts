@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, ipcMain } from 'electron';
+﻿import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import { WorktreeStore, SessionStore, runAgentTurn, otpDataDir, otpScratchDir } from '@otp/core';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -22,6 +22,10 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    // Frameless: the in-content title bar (src/App.tsx) is the only chrome.
+    // Its buttons talk back over IPC (win:* handlers below) and its drag
+    // region moves the window — the VS Code pattern.
+    frame: false,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -29,6 +33,8 @@ function createWindow(): void {
     },
   });
   windows.add(win);
+  win.on('maximize', () => win.webContents.send('win:maximized', true));
+  win.on('unmaximize', () => win.webContents.send('win:maximized', false));
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
     win.webContents.openDevTools();
@@ -180,7 +186,22 @@ ipcMain.handle('scratch:clear', () => {
   return { cleared };
 });
 
-app.whenReady().then(createWindow);
+// ── IPC: window controls (frameless title bar) ────────────────────────────
+
+ipcMain.on('win:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+ipcMain.on('win:maximize', (e) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!w) return;
+  if (w.isMaximized()) w.unmaximize(); else w.maximize();
+});
+ipcMain.on('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+
+app.whenReady().then(() => {
+  // No native menu bar: with a frameless window the in-content title bar
+  // is the only chrome.
+  Menu.setApplicationMenu(null);
+  createWindow();
+});
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

@@ -17,6 +17,14 @@ contextBridge.exposeInMainWorld('otp', {
   scratch: {
     clear: () => ipcRenderer.invoke('scratch:clear'),
   },
+  win: {
+    minimize: () => ipcRenderer.send('win:minimize'),
+    maximize: () => ipcRenderer.send('win:maximize'),
+    close: () => ipcRenderer.send('win:close'),
+  },
+  onMaximized: (cb: (max: boolean) => void) => {
+    ipcRenderer.on('win:maximized', (_e, max) => cb(max));
+  },
   onAgentOutput: (cb: (data: any) => void) => {
     ipcRenderer.on('agent-output', (_e, data) => cb(data));
   },

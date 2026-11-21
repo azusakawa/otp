@@ -173,6 +173,17 @@
     .divider:hover { background:var(--accent); opacity:.4; }
     .divider-h { height:4px; cursor:row-resize; background:transparent; flex-shrink:0; }
     .divider-h:hover { background:var(--accent); opacity:.4; }
+    /* Settings view */
+    .settings-view { flex:1; overflow:auto; padding:32px 32px; }
+    .settings-inner { max-width:560px; margin:0 auto; }
+    .settings-title { font-size:18px; font-weight:600; margin-bottom:24px; }
+    .setting-section { margin-bottom:24px; }
+    .setting-title { font-size:14px; font-weight:600; margin-bottom:2px; }
+    .setting-desc { font-size:12px; color:var(--text-tertiary); margin-bottom:12px; }
+    .segmented { display:inline-flex; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:3px; gap:2px; }
+    .segmented button { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:none; background:transparent; color:var(--text-secondary); border-radius:6px; font-size:13px; cursor:pointer; transition:background var(--motion-fast), color var(--motion-fast); }
+    .segmented button:hover { background:var(--bg-hover); color:var(--text-primary); }
+    .segmented button.active { background:var(--accent); color:#fff; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
   </style>
 </head>

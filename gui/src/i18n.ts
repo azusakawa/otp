@@ -51,6 +51,7 @@ const en: Record<string, SectionDict> = {
   },
   status: { running: 'Running', idle: 'Idle', error: 'Error' },
   session: { stop: 'Stop', duplicate: 'Duplicate' },
+  titlebar: { minimize: 'Minimize', maximize: 'Maximize', restore: 'Restore', close: 'Close' },
   chat: {
     welcome: 'Welcome to OTP',
     welcomeHint: 'Create a task tree on the left, pick an agent, and start collaborating — or use Ideas for project-free sessions',
@@ -91,6 +92,12 @@ const en: Record<string, SectionDict> = {
     create: 'Create',
   },
   worktree: { status: { running: 'Running', idle: 'Idle', error: 'Error' } },
+  settings: {
+    title: 'Settings',
+    appearance: { title: 'Appearance', desc: 'Choose light, dark, or follow system.' },
+    theme: { light: 'Light', dark: 'Dark', system: 'System' },
+    language: { title: 'Language', desc: 'Display language for the interface.', en: 'English', zhTW: '繁體中文' },
+  },
 };
 
 const zhTW: Record<string, SectionDict> = {
@@ -122,6 +129,7 @@ const zhTW: Record<string, SectionDict> = {
   },
   status: { running: '執行中', idle: '閒置', error: '錯誤' },
   session: { stop: '停止', duplicate: '副本' },
+  titlebar: { minimize: '最小化', maximize: '最大化', restore: '還原', close: '關閉' },
   chat: {
     welcome: '歡迎使用 OTP',
     welcomeHint: '左側建立任務樹 → 選智能體 → 啟動開始協作；不需專案可用 構想',
@@ -162,6 +170,12 @@ const zhTW: Record<string, SectionDict> = {
     create: '建立',
   },
   worktree: { status: { running: '執行中', idle: '閒置', error: '錯誤' } },
+  settings: {
+    title: '設定',
+    appearance: { title: '外觀', desc: '選擇淺色、深色或跟隨系統。' },
+    theme: { light: '淺色', dark: '深色', system: '跟隨系統' },
+    language: { title: '語言', desc: '介面顯示語言。', en: 'English', zhTW: '繁體中文' },
+  },
 };
 
 const resources: Record<Lang, { translation: Record<string, SectionDict> }> = {

@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
-import { useT, type Lang } from './i18n';
+import { useT, type Lang, setLanguage } from './i18n';
+import { getThemePref, setThemePref, initTheme, type ThemePref } from './theme';
 
 interface Worktree { id: string; name: string; path: string; branch: string; mainBranch: string; createdAt: number; sessionIds: string[]; }
 interface Message { id: string; role: 'user' | 'assistant' | 'system'; content: string; timestamp: number; }
@@ -12,11 +13,23 @@ declare global {
       worktrees: { list(): Promise<Worktree[]>; create(n: string, p: string): Promise<Worktree | { error: string }>; delete(id: string): Promise<boolean>; };
       sessions: { list(): Promise<Session[]>; create(wtId: string | null, agent: 'opencode' | 'hermes'): Promise<Session>; run(id: string, prompt: string): Promise<{ pid?: number; error?: string }>; stop(id: string): Promise<{ ok: boolean }>; get(id: string): Promise<Session | undefined>; delete(id: string): Promise<boolean>; };
       scratch: { clear(): Promise<{ cleared: number }>; };
+      win: { minimize(): void; maximize(): void; close(): void; };
       onAgentOutput: (cb: (d: any) => void) => void;
       onSessionUpdated: (cb: (s: Session) => void) => void;
+      onMaximized: (cb: (max: boolean) => void) => void;
     };
   }
 }
+
+// Frameless title-bar window buttons (32×24, matching the approved mockup).
+const WIN_BTN: React.CSSProperties = {
+  width: 32, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  borderRadius: 4, color: 'var(--text-secondary)', cursor: 'pointer',
+};
+
+// -webkit-app-region (Electron drag regions) is not in csstype; cast.
+const DRAG = { WebkitAppRegion: 'drag' } as React.CSSProperties;
+const NO_DRAG = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
 const AGENT_INFO: Record<string, { name: string; mark: string; color: string }> = {
   opencode: { name: 'OpenCode', mark: 'O', color: '#3b82f6' },
@@ -53,9 +66,14 @@ function I({ name, size = 16, stroke = 1.75 }: { name: string; size?: number; st
     send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
     sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>',
     'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
     check: '<polyline points="20 6 9 17 4 12"/>',
     play: '<polygon points="5 3 19 12 5 21 5 3"/>',
     square: '<rect x="3" y="3" width="18" height="18" rx="2"/>',
+    minus: '<line x1="5" y1="12" x2="19" y2="12"/>',
+    restore: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     refresh: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
   };
   const d = paths[name] || '';
@@ -106,9 +124,6 @@ function Sidebar({ worktrees, sessions, activeId, onSelect, onOpenCreateWt, onNe
       <div className="sidebar-header">
         <h1>OTP</h1>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <select className="lang-select" value={lng} onChange={e => setLang(e.target.value as Lang)} title="Language">
-            <option value="en">EN</option><option value="zh-TW">繁中</option>
-          </select>
           <button className="btn btn-sm" onClick={onOpenCreateWt}>{t('sidebar.newTaskTree')}</button>
         </div>
       </div>
@@ -292,6 +307,44 @@ function DiffPanel({ worktree }: any) {
   );
 }
 
+function SettingsView() {
+  const { t, lng, setLang } = useT();
+  const [themePref, setThemePrefState] = useState<ThemePref>(getThemePref());
+  const setTheme = (p: ThemePref) => { setThemePrefState(p); setThemePref(p); };
+  const sections = [
+    { id: 'appearance', title: t('settings.appearance.title'), desc: t('settings.appearance.desc'), render: () => (
+      <div className="segmented">
+        {(['light','dark','system'] as ThemePref[]).map(p => (
+          <button key={p} className={themePref === p ? 'active' : ''} onClick={() => setTheme(p)}>
+            <I name={p === 'light' ? 'sun' : p === 'dark' ? 'moon' : 'monitor'} size={16} /> {t(`settings.theme.${p}`)}
+          </button>
+        ))}
+      </div>
+    )},
+    { id: 'language', title: t('settings.language.title'), desc: t('settings.language.desc'), render: () => (
+      <div className="segmented">
+        <button className={lng === 'en' ? 'active' : ''} onClick={() => setLang('en' as Lang)}>{t('settings.language.en')}</button>
+        <button className={lng === 'zh-TW' ? 'active' : ''} onClick={() => setLang('zh-TW' as Lang)}>{t('settings.language.zhTW')}</button>
+      </div>
+    )},
+  ];
+  // add sun/moon/monitor paths
+  return (
+    <div className="settings-view">
+      <div className="settings-inner">
+        <div className="settings-title">{t('settings.title')}</div>
+        {sections.map(s => (
+          <div className="setting-section" key={s.id}>
+            <div className="setting-title">{s.title}</div>
+            <div className="setting-desc">{s.desc}</div>
+            {s.render()}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const { t } = useT();
   const [worktrees, setWorktrees] = useState<Worktree[]>([]);
@@ -304,6 +357,10 @@ function App() {
   const [wtError, setWtError] = useState('');
   const [streams, setStreams] = useState<Record<string, StreamState>>({});
   const [railTab, setRailTab] = useState('worktrees');
+  const [showSettings, setShowSettings] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  useEffect(() => { initTheme(); }, []);
+  useEffect(() => { window.otp.onMaximized(setIsMaximized); }, []);
 
   const [sidebarW, setSidebarW] = useStoredSize('otp.sidebarW', 272, 220, 400);
   const [termH, setTermH] = useStoredSize('otp.termH', 200, 140, 360);
@@ -375,14 +432,17 @@ function App() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh' }}>
-      {/* Title bar */}
-      <div style={{ height:36, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', background:'var(--bg-surface)', borderBottom:'1px solid var(--border-subtle)', userSelect:'none' }}>
+      {/* Title bar — frameless window: this is the only window chrome.
+          Drag region moves the window; buttons drive the real window. */}
+      <div style={{ height:36, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 12px', background:'var(--bg-surface)', borderBottom:'1px solid var(--border-subtle)', userSelect:'none', ...DRAG }}>
         <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:600, fontSize:13 }}>
           <I name="sparkles" size={16} /> OTP
         </div>
         <div style={{ fontSize:12, color:'var(--text-secondary)', fontWeight:500 }}>{activeWt ? `${activeWt.name} · ${activeWt.branch}` : '—'}</div>
-        <div style={{ display:'flex', gap:4 }}>
-          {['minus','square','x'].map(k => <div key={k} style={{ width:32, height:24, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:4, color:'var(--text-secondary)', cursor:'pointer' }}><I name={k === 'minus' ? 'square' : k === 'square' ? 'square' : 'x'} size={14} /></div>)}
+        <div style={{ display:'flex', ...NO_DRAG }}>
+          <div title={t('titlebar.minimize')} style={WIN_BTN} onClick={() => window.otp.win.minimize()}><I name="minus" size={14} /></div>
+          <div title={t(isMaximized ? 'titlebar.restore' : 'titlebar.maximize')} style={WIN_BTN} onClick={() => window.otp.win.maximize()}><I name={isMaximized ? 'restore' : 'square'} size={14} /></div>
+          <div title={t('titlebar.close')} style={WIN_BTN} onClick={() => window.otp.win.close()}><I name="x" size={14} /></div>
         </div>
       </div>
       <div style={{ display:'flex', flex:1, minHeight:0 }}>
@@ -392,7 +452,7 @@ function App() {
             <div key={it.id} className={`rail-item ${railTab === it.id ? 'active' : ''}`} title={it.label} onClick={() => setRailTab(it.id)}><I name={it.icon} size={24} stroke={1.5} /></div>
           ))}
           <div className="rail-spacer" />
-          <div className="rail-item" title={t('rail.settings')}><I name="settings" size={24} stroke={1.5} /></div>
+          <div className={`rail-item ${showSettings ? 'active' : ''}`} title={t('rail.settings')} onClick={() => { setShowSettings(s => !s); setRailTab('settings'); }}><I name="settings" size={24} stroke={1.5} /></div>
         </div>
         {/* Sidebar */}
         <Sidebar worktrees={worktrees} sessions={sessions} activeId={activeSessionId} onSelect={(id: string) => {
@@ -404,7 +464,7 @@ function App() {
         <div className="divider" onMouseDown={onSidebarDrag} onDoubleClick={() => setSidebarW(272)} />
         {/* Main */}
         <div className="main" style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          <Chat session={activeSession || null} stream={activeStream} onSend={handleSend} onStop={() => activeSessionId && handleStop(activeSessionId)} />
+          {showSettings ? <SettingsView /> : <Chat session={activeSession || null} stream={activeStream} onSend={handleSend} onStop={() => activeSessionId && handleStop(activeSessionId)} />}
           <div className="divider-h" onMouseDown={onTermDrag} onDoubleClick={() => setTermH(200)} />
           <TerminalPanel session={activeSession || null} stream={activeStream} termH={termH} />
         </div>
