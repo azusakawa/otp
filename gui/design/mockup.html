@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<!--
+  OTP GUI Redesign — High-fidelity mockup (design phase)
+  Reference: docs/design/reference-100k-stars.md (verified 2026-11-21)
+  Sources: VS Code (195,690★) activity bar / sidebar / panel / status bar;
+           n8n (211,555★) run state four-piece + token layering;
+           Dify (161,586★) type scale + composer gradient mask;
+           Open WebUI (159,176★) sidebar width memory + motion;
+           shadcn/ui (128,655★) CSS variable contract + oklch + single radius;
+           Windows Terminal (105,465★) terminal dock padding/mono;
+           Excalidraw (136,028★) floating island + keybinding chips.
+  Viewport: 1440x900. Self-contained: inline CSS + inline JS, no external deps,
+  no build step. Icons are inline SVG (real Lucide paths). Chinese (zh-TW) copy.
+  This file is a DESIGN ARTIFACT only. Do not treat as production source.
+-->
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OTP — Design Mockup</title>
+  <style>
+    :root {
+      --bg-canvas: #1a1a1c; --bg-surface: #202023; --bg-elevated: #26262a;
+      --bg-hover: rgba(255,255,255,.06); --bg-active: rgba(255,255,255,.10);
+      --border-subtle: rgba(255,255,255,.08); --border-strong: rgba(255,255,255,.14);
+      --text-primary: #e6e6e8; --text-secondary: #a0a0a8; --text-tertiary: #6f6f78;
+      --accent: #4f8cff; --accent-hover: #6ba1ff; --accent-pressed: #3a73e0;
+      --success: #2ea043; --warning: #d29922; --danger: #f85149; --info: #58a6ff;
+      --focus-ring: rgba(79,140,255,.55);
+      --radius: 8px; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 10px; --radius-xl: 14px;
+      --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      --motion-fast: 120ms cubic-bezier(.2,.8,.2,1);
+      --motion-base: 180ms cubic-bezier(.22,1,.36,1);
+      --motion-slow: 240ms cubic-bezier(.22,1,.36,1);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; width:100%; overflow:hidden; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-ui); font-size:13px; }
+    .app { display:flex; flex-direction:column; height:100vh; width:100vw; }
+    /* Title bar */
+    .titlebar { height:36px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); -webkit-app-region:drag; user-select:none; }
+    .titlebar-left, .titlebar-right { display:flex; align-items:center; gap:8px; }
+    .titlebar-center { font-size:12px; color:var(--text-secondary); font-weight:500; }
+    .otp-mark { display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px; }
+    .otp-mark svg { color:var(--accent); }
+    .win-ctrl { -webkit-app-region:no-drag; width:32px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:4px; color:var(--text-secondary); cursor:pointer; }
+    .win-ctrl:hover { background:var(--bg-hover); color:var(--text-primary); }
+    /* Body row */
+    .body { display:flex; flex:1; min-height:0; }
+    /* Activity rail */
+    .rail { width:48px; background:var(--bg-surface); border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; align-items:center; padding:8px 0; gap:4px; }
+    .rail-item { position:relative; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:6px; color:var(--text-secondary); cursor:pointer; transition:background var(--motion-fast), color var(--motion-fast); }
+    .rail-item:hover { background:var(--bg-hover); color:var(--text-primary); }
+    .rail-item.active { background:var(--bg-active); color:var(--text-primary); }
+    .rail-item.active::before { content:''; position:absolute; left:-6px; top:8px; bottom:8px; width:2px; background:var(--accent); border-radius:2px; }
+    .rail-spacer { flex:1; }
+    /* Sidebar */
+    .sidebar { width:272px; min-width:220px; max-width:400px; background:var(--bg-surface); border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; }
+    .sidebar-header { height:40px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-bottom:1px solid var(--border-subtle); }
+    .sidebar-header h1 { font-size:14px; font-weight:600; }
+    .sidebar-scroll { flex:1; overflow:auto; padding:8px 8px; }
+    .section { margin-bottom:8px; }
+    .section-header { height:28px; display:flex; align-items:center; justify-content:space-between; padding:0 8px; font-size:12px; font-weight:500; color:var(--text-secondary); border-radius:4px; cursor:pointer; }
+    .section-header:hover { background:var(--bg-hover); color:var(--text-primary); }
+    .section-title { display:flex; align-items:center; gap:6px; }
+    .chev { transition:transform var(--motion-fast); }
+    .section.collapsed .chev { transform:rotate(-90deg); }
+    .section.collapsed .section-body { display:none; }
+    .row { height:32px; display:flex; align-items:center; padding:0 8px; border-radius:6px; font-size:13px; cursor:pointer; gap:8px; color:var(--text-primary); transition:background var(--motion-fast); }
+    .row:hover { background:var(--bg-hover); }
+    .row.active { background:var(--bg-active); }
+    .row-meta { font-size:12px; color:var(--text-tertiary); margin-left:auto; }
+    /* Worktree card */
+    .wt-card { position:relative; padding:10px 12px; border-radius:8px; background:var(--bg-canvas); border:1px solid var(--border-subtle); margin-bottom:6px; cursor:pointer; transition:border-color var(--motion-fast), background var(--motion-fast); overflow:hidden; }
+    .wt-card:hover { border-color:var(--border-strong); }
+    .wt-card .status-bar-left { position:absolute; left:0; top:0; bottom:0; width:2px; }
+    .wt-card.running .status-bar-left { background:var(--accent); animation:pulse 1.6s ease-in-out infinite; }
+    .wt-card.idle .status-bar-left { background:var(--text-tertiary); }
+    .wt-card.error .status-bar-left { background:var(--danger); }
+    .wt-head { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+    .wt-name { font-size:13px; font-weight:600; }
+    .wt-branch { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-secondary); }
+    .wt-path { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wt-meta { display:flex; align-items:center; gap:6px; margin-top:6px; font-size:12px; color:var(--text-secondary); }
+    .status-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:500; }
+    .status-pill.running { background:color-mix(in oklch, var(--accent) 12%, transparent); border:1px solid color-mix(in oklch, var(--accent) 32%, transparent); color:var(--accent); }
+    .status-pill.idle { background:color-mix(in oklch, var(--text-tertiary) 12%, transparent); border:1px solid color-mix(in oklch, var(--text-tertiary) 32%, transparent); color:var(--text-secondary); }
+    .status-pill.error { background:color-mix(in oklch, var(--danger) 12%, transparent); border:1px solid color-mix(in oklch, var(--danger) 32%, transparent); color:var(--danger); }
+    .dot { width:6px; height:6px; border-radius:50%; }
+    .dot.running { background:var(--accent); animation:pulse 1.6s ease-in-out infinite; }
+    .dot.idle { background:var(--text-tertiary); }
+    .dot.error { background:var(--danger); }
+    .agent-mark { width:18px; height:18px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; }
+    .agent-mark.oc { background:#3b82f6; }
+    .agent-mark.hermes { background:#8b5cf6; }
+    /* Main */
+    .main { flex:1; display:flex; flex-direction:column; min-width:0; background:var(--bg-canvas); position:relative; }
+    .chat-wrap { flex:1; display:flex; flex-direction:column; min-height:0; position:relative; }
+    .chat { flex:1; overflow:auto; padding:24px 32px; }
+    .chat-inner { max-width:760px; margin:0 auto; }
+    .msg { margin-bottom:18px; }
+    .msg-role { font-size:11px; color:var(--text-tertiary); margin-bottom:4px; font-weight:500; text-transform:uppercase; letter-spacing:.04em; }
+    .msg-bubble { font-size:14px; line-height:22px; color:var(--text-primary); }
+    .msg-user .msg-bubble { background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px; }
+    .msg-assistant .msg-bubble { padding:2px 0; }
+    .msg-meta { font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+    /* Composer */
+    .composer-area { position:relative; padding:0 32px 16px; }
+    .composer-mask { position:absolute; top:-24px; left:0; right:0; height:24px; background:linear-gradient(to bottom, transparent, var(--bg-canvas)); pointer-events:none; }
+    .composer { background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; box-shadow:0 4px 16px rgba(0,0,0,.2); transition:border-color var(--motion-fast), box-shadow var(--motion-fast); }
+    .composer:focus-within { border-color:var(--accent); box-shadow:0 0 0 2px var(--focus-ring); }
+    .composer textarea { background:transparent; border:none; outline:none; color:var(--text-primary); font-family:var(--font-ui); font-size:14px; line-height:22px; resize:none; min-height:22px; max-height:120px; }
+    .composer textarea::placeholder { color:var(--text-tertiary); }
+    .composer-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .composer-tools { display:flex; align-items:center; gap:4px; }
+    .icon-btn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; color:var(--text-secondary); cursor:pointer; transition:background var(--motion-fast), color var(--motion-fast); }
+    .icon-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+    .send-btn { height:28px; padding:0 12px; border-radius:6px; background:var(--accent); color:#fff; border:none; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background var(--motion-fast); }
+    .send-btn:hover { background:var(--accent-hover); }
+    .send-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .kbd { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); }
+    /* Terminal dock */
+    .terminal-dock { height:200px; min-height:140px; max-height:360px; border-top:1px solid var(--border-subtle); background:#141416; display:flex; flex-direction:column; }
+    .terminal-tabs { height:32px; display:flex; align-items:center; padding:0 8px; gap:4px; border-bottom:1px solid var(--border-subtle); background:var(--bg-surface); }
+    .term-tab { height:24px; padding:0 10px; display:flex; align-items:center; gap:6px; border-radius:4px; font-size:12px; color:var(--text-secondary); cursor:pointer; }
+    .term-tab.active { background:var(--bg-active); color:var(--text-primary); }
+    .terminal-body { flex:1; padding:12px 16px; font-family:var(--font-mono); font-size:12.5px; line-height:1.6; color:#c9d1d9; overflow:auto; white-space:pre-wrap; }
+    .term-empty { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--text-secondary); text-align:center; }
+    .term-empty h3 { font-size:14px; font-weight:600; color:var(--text-primary); }
+    .term-empty p { font-size:12px; color:var(--text-tertiary); }
+    .cta { height:30px; padding:0 12px; border-radius:6px; background:var(--accent); color:#fff; border:none; font-size:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    /* Diff dock */
+    .diff-dock { width:380px; min-width:300px; max-width:520px; background:var(--bg-surface); border-left:1px solid var(--border-subtle); display:flex; flex-direction:column; }
+    .diff-toolbar { height:32px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-bottom:1px solid var(--border-subtle); font-size:12px; }
+    .diff-toolbar .title { font-weight:600; font-size:13px; }
+    .diff-body { flex:1; overflow:auto; padding:10px 12px; font-family:var(--font-mono); font-size:12px; line-height:1.5; }
+    .diff-file { margin-bottom:12px; }
+    .diff-file-name { font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+    .diff-line { padding:1px 8px; border-radius:3px; }
+    .diff-line.add { background:color-mix(in oklch, var(--success) 12%, transparent); color:var(--success); }
+    .diff-line.del { background:color-mix(in oklch, var(--danger) 12%, transparent); color:var(--danger); }
+    .diff-line.ctx { color:var(--text-secondary); }
+    .diff-empty { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--text-secondary); text-align:center; padding:24px; }
+    .diff-empty h3 { font-size:14px; font-weight:600; color:var(--text-primary); }
+    .diff-empty p { font-size:12px; color:var(--text-tertiary); max-width:260px; }
+    /* Status bar */
+    .statusbar { height:24px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; background:var(--bg-surface); border-top:1px solid var(--border-subtle); font-size:12px; color:var(--text-secondary); }
+    .statusbar-left, .statusbar-right { display:flex; align-items:center; gap:14px; }
+    .statusbar-item { display:flex; align-items:center; gap:5px; }
+    /* Empty chat state */
+    .chat-empty { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; }
+    .chat-empty h2 { font-size:20px; font-weight:600; }
+    .chat-empty p { font-size:13px; color:var(--text-secondary); max-width:420px; }
+    .prompt-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:760px; width:100%; margin-top:8px; }
+    .prompt-card { background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 14px; text-align:left; cursor:pointer; transition:border-color var(--motion-fast), background var(--motion-fast); }
+    .prompt-card:hover { border-color:var(--border-strong); background:var(--bg-hover); }
+    .prompt-card .pc-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+    .prompt-card .pc-desc { font-size:12px; color:var(--text-secondary); }
+    /* Sidebar empty suggestion */
+    .suggest-list { display:flex; flex-direction:column; gap:6px; padding:4px 8px; }
+    .suggest { background:var(--bg-canvas); border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; font-size:12px; color:var(--text-secondary); cursor:pointer; transition:border-color var(--motion-fast); }
+    .suggest:hover { border-color:var(--border-strong); color:var(--text-primary); }
+    /* Animations */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+    @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+    /* Section label for mockup variants */
+    .mockup-label { position:fixed; top:8px; right:8px; z-index:1000; background:var(--bg-elevated); border:1px solid var(--border-strong); border-radius:6px; padding:6px 10px; font-size:11px; color:var(--text-secondary); }
+    .variant { display:none; }
+    .variant.active { display:flex; }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">OTP GUI Redesign Mockup · zh-TW · 1440×900</div>
+
+  <!-- Variant A: main populated state -->
+  <div class="app variant active" id="v-main">
+    <!-- Title bar -->
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <div class="otp-mark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          OTP
+        </div>
+      </div>
+      <div class="titlebar-center">my-feature · main</div>
+      <div class="titlebar-right">
+        <div class="win-ctrl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        <div class="win-ctrl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="1"/></svg></div>
+        <div class="win-ctrl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></div>
+      </div>
+    </div>
+    <div class="body">
+      <!-- Rail -->
+      <div class="rail">
+        <div class="rail-item active" title="工作樹"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="rail-item" title="工作階段"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="rail-item" title="終端"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+        <div class="rail-item" title="差異"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></div>
+        <div class="rail-spacer"></div>
+        <div class="rail-item" title="設定"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      </div>
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h1>OTP</h1>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <select style="background:var(--bg-canvas);border:1px solid var(--border-subtle);color:var(--text-secondary);border-radius:5px;padding:2px 6px;font-size:11px;">
+              <option>繁中</option><option>EN</option>
+            </select>
+            <button class="cta" style="height:26px;font-size:11px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 新增</button>
+          </div>
+        </div>
+        <div class="sidebar-scroll">
+          <div class="section">
+            <div class="section-header"><span class="section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="6 9 12 15 18 9"/></svg> 工作樹 (2)</span></div>
+            <div class="section-body">
+              <!-- running -->
+              <div class="wt-card running">
+                <div class="status-bar-left"></div>
+                <div class="wt-head">
+                  <span class="agent-mark oc">O</span>
+                  <span class="wt-name">my-feature</span>
+                  <span class="status-pill running" style="margin-left:auto;"><span class="dot running"></span>執行中</span>
+                </div>
+                <div class="wt-branch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> feature/auth</div>
+                <div class="wt-path">~/projects/my-feature</div>
+                <div class="wt-meta"><span>2 個工作階段</span><span style="margin-left:auto;font-size:11px;color:var(--text-tertiary);">12:41</span></div>
+              </div>
+              <!-- idle -->
+              <div class="wt-card idle">
+                <div class="status-bar-left"></div>
+                <div class="wt-head">
+                  <span class="agent-mark hermes">H</span>
+                  <span class="wt-name">docs-site</span>
+                  <span class="status-pill idle" style="margin-left:auto;"><span class="dot idle"></span>閒置</span>
+                </div>
+                <div class="wt-branch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> main</div>
+                <div class="wt-path">~/projects/docs-site</div>
+                <div class="wt-meta"><span>0 個工作階段</span></div>
+              </div>
+              <!-- error -->
+              <div class="wt-card error">
+                <div class="status-bar-left"></div>
+                <div class="wt-head">
+                  <span class="agent-mark oc">O</span>
+                  <span class="wt-name">legacy-api</span>
+                  <span class="status-pill error" style="margin-left:auto;"><span class="dot error"></span>錯誤</span>
+                </div>
+                <div class="wt-branch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> fix/timeout</div>
+                <div class="wt-path">~/projects/legacy-api</div>
+              </div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-header"><span class="section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="6 9 12 15 18 9"/></svg> 工作階段 (3)</span></div>
+            <div class="section-body">
+              <div class="row active"><span class="agent-mark oc" style="width:16px;height:16px;font-size:9px;">O</span><span>實作登入頁</span><span class="row-meta">12 則</span></div>
+              <div class="row"><span class="agent-mark oc" style="width:16px;height:16px;font-size:9px;">O</span><span>重構 API 層</span><span class="row-meta">4 則</span></div>
+              <div class="row"><span class="agent-mark hermes" style="width:16px;height:16px;font-size:9px;">H</span><span>文件更新</span><span class="row-meta">idle</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Main chat -->
+      <div class="main">
+        <div class="chat-wrap">
+          <div class="chat">
+            <div class="chat-inner">
+              <div class="msg msg-assistant">
+                <div class="msg-role">智能體 · OpenCode</div>
+                <div class="msg-bubble">我已閱讀 repository 結構，準備開始實作登入頁。先確認一下：要支援 email/password 還是 OAuth？</div>
+                <div class="msg-meta">12:38 · 1.2k tokens</div>
+              </div>
+              <div class="msg msg-user">
+                <div class="msg-role">使用者</div>
+                <div class="msg-bubble">先做 email/password，之後再加 OAuth。要包含表單驗證。</div>
+              </div>
+              <div class="msg msg-assistant">
+                <div class="msg-role">智能體 · OpenCode</div>
+                <div class="msg-bubble">好的，我會建立 `LoginForm.tsx`、`useAuth` hook，並加上 zod 驗證。開始建立檔案…</div>
+                <div class="msg-meta">12:40 · 842 tokens · 3 個工具呼叫</div>
+              </div>
+            </div>
+          </div>
+          <div class="composer-area">
+            <div class="composer-mask"></div>
+            <div class="composer">
+              <textarea placeholder="輸入訊息發送給智能體..." rows="1"></textarea>
+              <div class="composer-row">
+                <div class="composer-tools">
+                  <div class="icon-btn" title="附加檔案"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
+                  <div class="icon-btn" title="模型"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-2 3-2 3h-4s-2-1.05-2-3a4 4 0 0 1 4-4z"/><path d="M8 9h8"/><path d="M9 9v9a3 3 0 0 0 6 0V9"/></svg></div>
+                  <span class="kbd">⌘↵ 送出</span>
+                </div>
+                <button class="send-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 發送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Terminal dock -->
+        <div class="terminal-dock">
+          <div class="terminal-tabs">
+            <div class="term-tab active"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> bash</div>
+            <div class="term-tab">node</div>
+            <div class="icon-btn" style="margin-left:auto;width:24px;height:24px;" title="新增終端"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </div>
+          <div class="terminal-body">$ git status
+On branch feature/auth
+Changes to be committed:
+  modified: src/components/LoginForm.tsx
+  new file:   src/hooks/useAuth.ts
+
+$ pnpm build
+✓ built in 2.3s</div>
+        </div>
+      </div>
+      <!-- Diff dock -->
+      <div class="diff-dock">
+        <div class="diff-toolbar">
+          <span class="title">變更 · my-feature</span>
+          <div style="display:flex;gap:4px;">
+            <div class="icon-btn" style="width:24px;height:24px;" title="重新整理"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
+          </div>
+        </div>
+        <div class="diff-body">
+          <div class="diff-file">
+            <div class="diff-file-name">src/components/LoginForm.tsx</div>
+            <div class="diff-line ctx">@@ -1,5 +1,12 @@</div>
+            <div class="diff-line add">+ import { z } from 'zod';</div>
+            <div class="diff-line add">+ const schema = z.object({...});</div>
+            <div class="diff-line ctx">  export default function LoginForm() {</div>
+            <div class="diff-line del">-   return null;</div>
+            <div class="diff-line add">+   return &lt;form&gt;...&lt;/form&gt;;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Status bar -->
+    <div class="statusbar">
+      <div class="statusbar-left">
+        <div class="statusbar-item"><span class="dot running"></span> 執行中 · OpenCode</div>
+        <div class="statusbar-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> feature/auth</div>
+        <div class="statusbar-item">1.2k tokens · 4.2s</div>
+      </div>
+      <div class="statusbar-right">
+        <div class="statusbar-item">UTF-8</div>
+        <div class="statusbar-item">⌘K 命令面板 · ⌘B 側欄 · ⌘J 終端</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant B: empty states showcase -->
+  <div class="app variant" id="v-empty">
+    <div class="titlebar">
+      <div class="titlebar-left"><div class="otp-mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> OTP</div></div>
+      <div class="titlebar-center">—</div>
+      <div class="titlebar-right"><div class="win-ctrl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></div></div>
+    </div>
+    <div class="body">
+      <div class="rail">
+        <div class="rail-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="rail-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="rail-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+        <div class="rail-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></div>
+        <div class="rail-spacer"></div>
+        <div class="rail-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      </div>
+      <div class="sidebar">
+        <div class="sidebar-header"><h1>OTP</h1><button class="cta" style="height:26px;font-size:11px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 新增工作樹</button></div>
+        <div class="sidebar-scroll">
+          <div class="section">
+            <div class="section-header"><span class="section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="6 9 12 15 18 9"/></svg> 工作樹 (0)</span></div>
+            <div class="section-body">
+              <div class="suggest-list">
+                <div class="suggest">尚無工作樹。點「新增工作樹」或按 ⌘O 加入一個 Git 倉庫。</div>
+                <div class="suggest">審查 PR · 修復 bug · 解釋程式碼</div>
+                <div class="suggest">不需專案的構想對話：選擇 agent（O / H）開始</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <div class="chat-wrap">
+          <div class="chat-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            <h2>歡迎使用 OTP</h2>
+            <p>左側建立工作樹 → 選擇智能體 → 啟動開始協作。或用下方建議開始一段構想對話。</p>
+            <div class="prompt-cards">
+              <div class="prompt-card"><div class="pc-title">審查 PR</div><div class="pc-desc">分析 diff 並給出審查意見</div></div>
+              <div class="prompt-card"><div class="pc-title">修復 bug</div><div class="pc-desc">定位並修復一個錯誤</div></div>
+              <div class="prompt-card"><div class="pc-title">解釋程式碼</div><div class="pc-desc">理解一個模組的運作</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="terminal-dock">
+          <div class="terminal-tabs">
+            <div class="term-tab active">bash</div>
+          </div>
+          <div class="term-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <h3>沒有執行中的終端</h3>
+            <p>啟動智能體後輸出會顯示於此</p>
+            <button class="cta"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 開啟終端 · ⌘J</button>
+          </div>
+        </div>
+      </div>
+      <div class="diff-dock">
+        <div class="diff-toolbar"><span class="title">差異</span></div>
+        <div class="diff-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
+          <h3>選擇檔案查看變更</h3>
+          <p>差異來源：working tree 或 commit。啟動工作階段後自動顯示。</p>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar">
+      <div class="statusbar-left"><div class="statusbar-item"><span class="dot idle"></span> 閒置</div></div>
+      <div class="statusbar-right"><div class="statusbar-item">⌘K 命令面板</div></div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle between variants with 1/2 keys for review
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '1') { document.getElementById('v-main').classList.add('active'); document.getElementById('v-empty').classList.remove('active'); }
+      if (e.key === '2') { document.getElementById('v-empty').classList.add('active'); document.getElementById('v-main').classList.remove('active'); }
+    });
+  </script>
+</body>
+</html>
