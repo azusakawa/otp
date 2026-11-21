@@ -290,6 +290,8 @@ pnpm checksums      # 產生 SHA256SUMS.txt
 
 ## 7. 推薦 README 下載區塊
 
+> **更新（2026-11-21，最終決定）**：README 最終版（研究報告見 `readme.md`）**不列校驗檔行、不提 SHA-256 驗證**——下載表只留「安裝版（建議）/ 免安裝版」兩行。`SHA256SUMS.txt` 仍由 build 產生（`pnpm checksums`）並附於 Release，但 README 不展示。下方程式碼塊為初版草案，保留作決策過程紀錄。
+
 位置：`Quick Start` **之前**，標題 `## Download`；TOC 的 `[Download](#quick-start)` 改為 `[Download](#download)`。
 內容順序：平台需求 → 安裝版/zip 版兩列 → SHA256 + Releases 連結 → SmartScreen 提示（blockquote）。
 連結一律用 `releases/latest` 頁面（檔名含版本，`latest/download/<檔名>` 換版即 404）；Release notes 才放版本鎖定直接連結。

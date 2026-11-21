@@ -2,21 +2,19 @@
 
 # OTP
 
-**Octopus Task Planner — 輕量級 AI 智能體編排器，支援 OpenCode & Hermes**
+**Octopus Task Planner — 平行 AI 編碼智能體編排器，支援 OpenCode & Hermes**
 
 [![GitHub stars](https://img.shields.io/github/stars/azusakawa/otp?style=flat-square&label=Stars&color=orange)](https://github.com/azusakawa/otp/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg?style=flat-square)]()
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-42a5f9?style=flat-square)]()
-[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square)](https://nodejs.org)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-42a5f9?style=flat-square)]()
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M2V52B10UW)
 
-輕量級個人 AI 智能體編排器。
+輕量級的個人 AI 智能體編排器。
 
-[**下載**](#下載) · [**功能**](#功能) · [**快速開始**](#快速開始) · [**CLI 參考**](#cli-參考) · [**架構**](#架構) · [**貢獻指南**](#貢獻指南)
+[**下載**](#下載) · [**快速開始**](#快速開始) · [**功能**](#功能) · [**支援的智能體**](#支援的智能體) · [**授權條款**](#授權條款)
 
-**[English](./README.md) | 中文**
+[**English**](./README.md) | 繁體中文
 
 </div>
 
@@ -24,37 +22,30 @@
 
 ## 下載
 
-**Windows 10 22H2+ / Windows 11 · x64** — OTP 是桌面程式：安裝或解壓後執行 `OTP.exe` 即可，不需要命令提示字元。
+**Windows 10 22H2+ / Windows 11 · x64** — OTP 是桌面應用程式：安裝或解壓後直接啟動，不需要命令提示字元。
 
 | 版本 | 檔案 | 說明 |
 |---|---|---|
-| **安裝版（建議）** | `OTP-Setup-0.1.0-x64.exe` | 預設安裝給目前使用者（免管理員）；wizard 中可改選「所有使用者」。會建立開始功能表／桌面捷徑，並提供反安裝。 |
-| **免安裝版** | `OTP-0.1.0-win-x64.zip` | 解壓即用，執行 `OTP.exe` 即可。不寫註冊表、不建捷徑；更新時直接取代整個資料夾。 |
-| 校驗檔 | `SHA256SUMS.txt` | 執行前可先比對 SHA-256。 |
+| **安裝版（建議）** | `OTP-Setup-0.1.0-x64.exe` | 預設為使用者層級安裝（不需管理員權限）；精靈可改安裝位置或安裝給所有使用者。會加入開始功能表／桌面捷徑與解除安裝項目。 |
+| **免安裝版** | `OTP-0.1.0-win-x64.zip` | 不需安裝。解壓到任何位置後執行 `OTP.exe`。不建捷徑、不寫登錄；更新時直接替換整個資料夾即可。 |
 
-請至 [Releases 頁面](https://github.com/azusakawa/otp/releases/latest) 取得最新版本。
+最新檔案請到 [Releases 頁面](https://github.com/azusakawa/otp/releases/latest) 取得。
 
-> **未簽章提醒**
-> OTP 目前尚未程式碼簽章，Windows SmartScreen 可能顯示 **「Windows 已保護您的電腦」**、發行者為 **「未知的發行者」** — 點選 **「更多資訊」→「仍要執行」** 即可繼續。
-> 若想先驗證，請比對同一個 Release 中 `SHA256SUMS.txt` 的 SHA-256。
+> **未簽名版本提醒**
+> OTP 目前尚未程式碼簽章。Windows SmartScreen 可能顯示「Windows 已保護你的電腦」，且發行商為「不明」——點選 **更多資訊 → 仍要執行** 即可繼續。
 
 ---
 
 ## 快速開始
 
-三個指令即可啟動：
+**前置需求**：本機已安裝並登入其中一個智能體 CLI——[OpenCode](https://opencode.ai) 或 [Hermes Agent](https://hermes-agent.nousresearch.com)。OTP 負責啟動它們，本身不附帶 AI 引擎。
 
-```bash
-# 克隆 & 安裝
-git clone https://github.com/azusakawa/otp.git
-cd otp
-pnpm install
+1. **安裝或解壓**（見「下載」），然後啟動 **OTP**。
+2. 點選 **＋ 任務樹**，選擇一個 git 倉庫。
+3. 建立工作階段——按 **O** 使用 OpenCode，或按 **H** 使用 Hermes。沒有倉庫？直接按 **O/H** 即可建立不附專案的構想工作階段。
+4. 輸入第一個任務並執行。在聊天與終端中即時觀看智能體工作。
 
-# 啟動 GUI
-pnpm dev:gui
-```
-
-開啟後即可看到三欄佈局：**工作樹**、**聊天**、**終端**。
+你的 worktree、工作階段與歷史都存放在 `~/.otp`——重裝後仍保留，解除安裝程式也不會動到它們。
 
 ---
 
@@ -62,106 +53,24 @@ pnpm dev:gui
 
 | 功能 | 說明 |
 |---|---|
-| 🖥️ **桌面 GUI** | 三欄佈局（工作樹 / 聊天 / 終端），可調整分割視窗 |
-| 💻 **CLI** | 完整命令列介面 —— 智能體也能呼叫 |
-| 🐙 **多智能體** | 同時支援 OpenCode & Hermes Agent |
-| 🌲 **平行工作樹** | 每個任務擁有獨立的 Git worktree |
-| 💬 **即時聊天** | 向智能體發送訊息，即時接收回應 |
-| 📺 **終端輸出** | 即時串流顯示智能體 stdout/stderr |
-
----
-
-## CLI 參考
-
-```bash
-otp worktree <name> -r <repo-path>      # 建立工作樹
-otp worktree:ls                          # 列出工作樹
-otp worktree:rm <id>                     # 刪除工作樹
-
-otp session:create -w <wt-id> -a <type>  # 建立會話（opencode / hermes）
-otp session:start <id>                   # 啟動智能體
-otp session:stop <id>                    # 停止智能體
-otp session:ls                           # 列出會話
-```
-
----
-
-## 架構
-
-```
-otp/
-├── core/                     # 共享核心庫
-│   ├── src/
-│   │   ├── types/           # TypeScript 類型與 Zod schema
-│   │   ├── stores.ts        # 持久化會話/工作樹存儲
-│   │   ├── agent.ts         # 智能體進程管理
-│   │   └── helpers/         # 工具函數
-│   └── package.json
-│
-├── cli/                      # 命令行介面
-│   ├── src/index.ts         # Commander CLI
-│   └── package.json
-│
-└── gui/                      # 桌面應用（Electron + React）
-    ├── electron/main/       # Electron 主進程 + IPC
-    ├── src/                 # React UI 組件
-    │   ├── App.tsx          # 三欄佈局
-    │   ├── styles.css       # GitHub 深色主題
-    │   └── index.tsx        # 入口檔案
-    └── package.json
-```
-
-`core` 是唯一的真實來源 —— `cli` 和 `gui` 都依賴它，確保類型、存儲和智能體邏輯一致。
+| 🖥️ **桌面 GUI** | 三欄佈局（任務樹／聊天／終端）、無框視窗、淺色與深色主題 |
+| 🐙 **多智能體** | 同時支援 OpenCode 與 Hermes Agent |
+| 🌲 **平行 worktree** | 每個任務擁有獨立的 Git worktree |
+| 💬 **即時聊天** | 發送訊息給智能體並即時取得回覆 |
+| 📺 **終端輸出** | 即時串流智能體的 stdout/stderr |
+| ⚙️ **設定** | 主題（淺色／深色／跟隨系統）與介面語言（EN／繁體中文） |
 
 ---
 
 ## 支援的智能體
 
-| 智能體 | CLI 指令 | 狀態 |
+| 智能體 | 安裝 | 狀態 |
 |---|---|---|
-| [OpenCode](https://opencode.ai) | `opencode` | ✅ 完整支援 |
-| [Hermes Agent](https://hermes-agent.nousresearch.com) | `hermes` | ✅ 完整支援 |
-
-可以在 `core/src/types/` 中擴充更多智能體類型。
+| [OpenCode](https://opencode.ai) | `curl -fsSL https://opencode.ai/install \| bash` · Windows: `powershell -c "irm https://opencode.ai/install.ps1 \| iex"` | ✅ 完整支援 |
+| [Hermes Agent](https://hermes-agent.nousresearch.com) | 見官方網站 | ✅ 完整支援 |
 
 ---
 
-## 技術棧
-
-- **語言：** TypeScript 5.x（嚴格模式）
-- **建構：** pnpm workspaces
-- **GUI：** Electron 33 + React 18 + Vite
-- **CLI：** Commander
-- **Schema 驗證：** Zod
-- **存儲：** JSON 檔案（會話、工作樹）
-
----
-
-## 貢獻指南
-
-歡迎貢獻！請閱讀 [CONTRIBUTING.md](./CONTRIBUTING.md) 了解更多。
-
-快速指南：
-
-```bash
-# 1. Fork & 克隆
-git clone https://github.com/<your-username>/otp.git
-cd otp
-pnpm install
-
-# 2. 建立分支
-git checkout -b feature/my-feature
-
-# 3. 建構 & 驗證
-pnpm build        # 建構所有套件
-pnpm typecheck    # 檢查所有類型
-
-# 4. 提交 PR
-git push -u origin feature/my-feature
-```
-
----
-
-## License
+## 授權條款
 
 [MIT](./LICENSE) © 2026 azusakawa
