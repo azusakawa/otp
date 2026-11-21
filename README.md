@@ -14,9 +14,27 @@
 
 The lightweight, personal AI agent orchestrator.
 
-[**Download**](#quick-start) · [**Features**](#features) · [**CLI**](#cli-reference) · [**Architecture**](#architecture) · [**Contributing**](#contributing)
+[**Download**](#download) · [**Features**](#features) · [**CLI**](#cli-reference) · [**Architecture**](#architecture) · [**Contributing**](#contributing)
 
 </div>
+
+---
+
+## Download
+
+**Windows 10 22H2+ / Windows 11 · x64** — OTP is a desktop app; install it or extract it, then launch `OTP.exe`. No terminal needed.
+
+| Build | File | Notes |
+|---|---|---|
+| **Installer (recommended)** | `OTP-Setup-0.1.0-x64.exe` | Installs for the current user by default (no admin); choose "All users" in the wizard for a machine-wide install. Adds Start Menu / desktop shortcuts and an uninstaller. |
+| **Portable** | `OTP-0.1.0-win-x64.zip` | No installation. Extract anywhere and run `OTP.exe`. No shortcuts, no registry entries; update by replacing the folder. |
+| Checksums | `SHA256SUMS.txt` | Verify your download before running. |
+
+Grab the latest files from the [Releases page](https://github.com/azusakawa/otp/releases/latest).
+
+> **Unsigned build notice**
+> OTP is not code-signed yet. Windows SmartScreen may show **"Windows protected your PC"** with publisher **"Unknown publisher"** — click **More info → Run anyway** to continue.
+> To verify first, compare the file's SHA-256 with `SHA256SUMS.txt` in the same release.
 
 ---
 
